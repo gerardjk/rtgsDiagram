@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Particle Test</title>
+    <style>
+        body { margin: 0; background: #000; }
+        svg { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+    <svg viewBox="0 0 800 600">
+        <!-- Simple test path -->
+        <path id="test-path" d="M 100 300 L 700 300" stroke="#3b82f6" stroke-width="3" fill="none"/>
+
+        <!-- Test particle -->
+        <circle id="test-particle" r="5" fill="white" stroke="white">
+            <animateMotion dur="3s" repeatCount="indefinite">
+                <mpath href="#test-path"/>
+            </animateMotion>
+        </circle>
+    </svg>
+
+    <script>
+        console.log('Simple particle test loaded');
+
+        // Also test with JavaScript animation
+        setTimeout(() => {
+            const path = document.getElementById('test-path');
+            const svg = document.querySelector('svg');
+
+            // Create a particle manually
+            const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            particle.setAttribute('r', '8');
+            particle.setAttribute('fill', 'yellow');
+            particle.style.filter = 'drop-shadow(0 0 10px yellow)';
+            svg.appendChild(particle);
+
+            const pathLength = path.getTotalLength();
+            let progress = 0;
+
+            function animate() {
+                progress = (progress + 0.01) % 1;
+                const point = path.getPointAtLength(progress * pathLength);
+                particle.setAttribute('cx', point.x);
+                particle.setAttribute('cy', point.y);
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+            console.log('JavaScript particle created');
+        }, 1000);
+    </script>
+</body>
+</html>

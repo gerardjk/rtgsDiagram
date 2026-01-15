@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RITS Diagram</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 10px;
+      background: #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    #diagram {
+      width: 100%;
+      height: auto;
+      max-width: 95vw;
+      max-height: 95vh;
+    }
+
+    /* Hide ALL SVG content initially except defs */
+    #diagram > *:not(defs) {
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+    /* Only RITS circle and its label visible at start */
+    #diagram > .intro-title,
+    #diagram > #big-group,
+    #diagram > #big-label {
+      opacity: 1;
+    }
+    /* Labels inside groups also need to be visible */
+    #adis-label, #non-adis-label {
+      opacity: 1 !important;
+    }
+    /* Reveal when JS adds this class */
+    #diagram > *.diagram-visible {
+      opacity: 1;
+    }
+    /* Disable all tooltips during animation */
+    body.animating-startup [data-interactive-id] {
+      pointer-events: none !important;
+    }
+
+    /* FORCE opacity during animation - override any JS changes */
+    body.animating-startup #diagram > *:not(defs):not(.intro-title):not(#big-group):not(#big-label):not(.diagram-visible) {
+      opacity: 0 !important;
+      filter: none !important;
+    }
+
+    /* Prevent ANY highlighting during animation */
+    body.animating-startup .highlighted {
+      filter: none !important;
+    }
+
+    /* Subtle permanent glow on RITS and FSS text labels */
+    #big-label, #small-label {
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+    }
+
+    /* Animated line brightness - no particles, just moving light */
+    .animated-flow-line {
+      mask-image: linear-gradient(to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%);
+      -webkit-mask-image: linear-gradient(to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%);
+    }
+
+    @keyframes flowingLight {
+      0% {
+        filter: brightness(1);
+      }
+      50% {
+        filter: brightness(1.8);
+      }
+      100% {
+        filter: brightness(1);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG canvas: 700×1000 to accommodate extended arc -->
+  <svg id="diagram" viewBox="-600 -165 1550 1100" preserveAspectRatio="xMidYMid meet" aria-label="circles with enclosing arc"
+       xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs>
+      <!-- Colors -->
+      <style>
+        .big-fill { fill: #3b82f6; }       /* blue fill */
+        .big-stroke { stroke: #1e3a8a; }   /* dark blue stroke */
+        .small-fill { fill: #F5FF00; }     /* orange/yellow fill */
+        .small-stroke { stroke: #9a3412; } /* dark orange stroke */
+        .arc-stroke { stroke: #e5e7eb; }   /* light grey arc for dark mode */
+      </style>
+      <!-- Gradient for figure-8 effect -->
+      <radialGradient id="darkEdgeGradient">
+        <stop offset="85%" stop-color="transparent"/>
+        <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0.8"/>
+      </radialGradient>
+    </defs>
+
+    <!-- ----- PARAMS (edit these numbers) ----- -->
+    <!-- Diagram center line (x-only). All circles share this x. -->
+    <!-- Change cx to shift everything left/right together. -->
+    <g id="params" data-cx="300" data-cy-big="450" data-r-big="113" data-gap="20" data-r-small="70"
+       data-arc-r="320" data-arc-angle-deg="220" data-arc-offset-deg="0" data-stroke-width="8"></g>
+    <!-- -------------------------------------- -->
+
+    <!-- Background elements group -->
+    <g id="background-elements" class="diagram-content"></g>
+
+    <!-- Background rectangle for blue dots -->
+    <rect id="blue-dots-background" class="diagram-content" fill="none" stroke="none" />
+
+    <!-- Group for blue connecting lines (rendered first so they appear under circles) -->
+    <g id="blue-connecting-lines" class="diagram-content"></g>
+
+    <!-- Group for red connecting lines (rendered before blue circle so they appear under it) -->
+    <g id="red-connecting-lines" class="diagram-content"></g>
+
+    <!-- Group for orange connecting lines (rendered before blue circle so they appear under it) -->
+    <g id="orange-connecting-lines" class="diagram-content"></g>
+
+    <!-- Group for administrative red/yellow lines into the blue circle -->
+    <g id="admin-connecting-lines" class="diagram-content"></g>
+
+    <!-- Group for labels -->
+    <g id="dot-labels" class="diagram-content"></g>
+
+    <!-- Large blue circle with double border -->
+    <!-- Uses: cx (shared), cy_big, r_big -->
+    <g id="big-group" class="diagram-content">
+      <!-- Layer 1: Lightest blue background circle -->
+      <circle id="big-outer"
+              fill="#04d9ff"
+              fill-opacity="0.5"
+              cx="300" cy="450" r="113"></circle>
+      <!-- Layer 2: Medium blue gear shape border -->
+      <path id="big-gear-border"
+            fill="#03a8cc"
+            stroke="#ffffff"
+            stroke-width="1"
+            d=""
+            transform="translate(300, 450)"></path>
+      <!-- Layer 3: Next darkest blue circle fill -->
+      <circle id="big-inner"
+              fill="#027799"
+              stroke="#015166"
+              stroke-width="1"
+              cx="300" cy="450" r="97"></circle>
+      <!-- Layer 4: Darkest blue interior gear pattern -->
+      <path id="big-gear"
+            fill="#013B4A"
+            stroke="#ffffff"
+            stroke-width="0.5"
+            d=""
+            transform="translate(300, 450)"></path>
+    </g>
+
+    <!-- Label for blue circle -->
+    <text id="big-label" class="diagram-content" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
+      <tspan x="300" dy="-40" font-size="20">RITS</tspan>
+      <tspan x="300" dy="20">Settlement</tspan>
+      <tspan x="300" dy="20">Engine</tspan>
+      <tspan x="300" dy="22" font-size="12" font-weight="normal">Monday - Friday</tspan>
+      <tspan x="300" dy="16" font-size="12" font-weight="normal">7:30-22:00</tspan>
+      <tspan x="300" dy="16" font-size="10" font-weight="normal">AEST/AEDT</tspan>
+    </text>
+
+    <!-- Smaller orange/yellow circle above the big one with double border -->
+    <!-- y = cy_big - (r_big + gap) + r_small, so they don't overlap -->
+    <g id="small-group" class="diagram-content">
+      <!-- Layer 1: Light orangey-yellow background circle -->
+      <circle id="small-outer"
+              fill="#FFE680"
+              fill-opacity="0.5"
+              cx="300" cy="222" r="48"></circle>
+      <!-- Layer 2: Neon yellow gear shape border -->
+      <path id="small-gear-border"
+            fill="#FFFF00"
+            stroke="#ffffff"
+            stroke-width="1"
+            d=""
+            transform="translate(300, 222)"></path>
+      <!-- Layer 3: More orange circle fill -->
+      <circle id="small-inner"
+              fill="#C77F12"
+              stroke="#D35400"
+              stroke-width="1"
+              cx="300" cy="222" r="40"></circle>
+      <!-- Layer 4: Much darker orange interior gear pattern -->
+      <path id="small-gear"
+            fill="#4A2108"
+            stroke="#ffffff"
+            stroke-width="0.5"
+            d=""
+            transform="translate(300, 222)"></path>
+    </g>
+
+    <!-- Label for orange circle -->
+    <text id="small-label" class="diagram-content" x="300" y="222" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
+      <tspan x="300" dy="-6">FSS</tspan>
+      <tspan x="300" dy="20" font-size="13" font-weight="normal">24/7</tspan>
+    </text>
+
+    <!-- Right-side semi-circular arc that starts above the small circle and ends below the big circle.
+         Drawn as an SVG path using an elliptical arc (A) command. -->
+    <path id="enclosing-arc"
+          class="arc-stroke diagram-content"
+          d="" fill="none" stroke-width="6" stroke-linecap="round"></path>
+
+  </svg>
+
+  <!-- Load modules in dependency order -->
+  <script src="helper.js"></script>
+  <script src="diagram-config.js"></script>
+  <script src="diagram-circles.js"></script>
+  <script src="diagram-boxes.js"></script>
+  <script src="diagram-lines.js"></script>
+  <script src="diagram-labels.js"></script>
+  <script src="diagram-tooltips-data.js"></script>
+  <script src="diagram-relationships.js"></script>
+  <script src="diagram-interactive.js"></script>
+  <script src="diagram-core-refactored.js"></script>
+  <script src="diagram-init.js"></script>
+  <script src="diagram-export.js"></script>
+  <script src="force-particles.js"></script>
+
+</body>
+</html>

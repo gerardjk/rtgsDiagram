@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RITS Diagram</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { margin: 0; background:#ffffff; display:grid; place-items:center; height:100vh; }
+  </style>
+</head>
+<body>
+  <!-- SVG canvas: 700×1000 to accommodate extended arc -->
+  <svg id="diagram" width="1500" height="1100" viewBox="-650 -150 1500 1100" aria-label="circles with enclosing arc">
+    <defs>
+      <!-- Colors -->
+      <style>
+        .big-fill { fill: #3b82f6; }       /* blue fill */
+        .big-stroke { stroke: #1e3a8a; }   /* dark blue stroke */
+        .small-fill { fill: #f59e0b; }     /* orange/yellow fill */
+        .small-stroke { stroke: #9a3412; } /* dark orange stroke */
+        .arc-stroke { stroke: #111827; }   /* very dark grey arc */
+      </style>
+      <!-- Gradient for figure-8 effect -->
+      <radialGradient id="darkEdgeGradient">
+        <stop offset="85%" stop-color="transparent"/>
+        <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0.8"/>
+      </radialGradient>
+    </defs>
+
+    <!-- ----- PARAMS (edit these numbers) ----- -->
+    <!-- Diagram center line (x-only). All circles share this x. -->
+    <!-- Change cx to shift everything left/right together. -->
+    <g id="params" data-cx="300" data-cy-big="450" data-r-big="113" data-gap="20" data-r-small="70"
+       data-arc-r="320" data-arc-angle-deg="220" data-arc-offset-deg="0" data-stroke-width="8"></g>
+    <!-- -------------------------------------- -->
+
+    <!-- Background rectangle for blue dots -->
+    <rect id="blue-dots-background" fill="none" stroke="none" />
+
+    <!-- Group for blue connecting lines (rendered first so they appear under circles) -->
+    <g id="blue-connecting-lines"></g>
+    
+    <!-- Group for red connecting lines (rendered before blue circle so they appear under it) -->
+    <g id="red-connecting-lines"></g>
+
+    <!-- Group for orange connecting lines (rendered before blue circle so they appear under it) -->
+    <g id="orange-connecting-lines"></g>
+
+    <!-- Group for administrative red/yellow lines into the blue circle -->
+    <g id="admin-connecting-lines"></g>
+
+    <!-- Large blue circle with double border -->
+    <!-- Uses: cx (shared), cy_big, r_big -->
+    <g id="big-group">
+      <!-- Layer 1: Lightest blue background circle -->
+      <circle id="big-outer"
+              fill="#60a5fa"
+              cx="300" cy="450" r="113"></circle>
+      <!-- Layer 2: Medium blue gear shape border -->
+      <path id="big-gear-border"
+            fill="#3b82f6"
+            stroke="#1e3a8a"
+            stroke-width="1"
+            d=""
+            transform="translate(300, 450)"></path>
+      <!-- Layer 3: Next darkest blue circle fill -->
+      <circle id="big-inner"
+              fill="#2563eb"
+              stroke="#1e3a8a"
+              stroke-width="1"
+              cx="300" cy="450" r="97"></circle>
+      <!-- Layer 4: Darkest blue interior gear pattern -->
+      <path id="big-gear"
+            fill="#1e3a8a"
+            stroke="#ffffff"
+            stroke-width="0.5"
+            d=""
+            transform="translate(300, 450)"></path>
+    </g>
+    
+    <!-- Label for blue circle -->
+    <text id="big-label" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
+      <tspan x="300" dy="-40" font-size="20">RITS</tspan>
+      <tspan x="300" dy="20">Settlement</tspan>
+      <tspan x="300" dy="20">Engine</tspan>
+      <tspan x="300" dy="22" font-size="12" font-weight="normal">Monday - Friday</tspan>
+      <tspan x="300" dy="16" font-size="12" font-weight="normal">7:30-22:00</tspan>
+      <tspan x="300" dy="16" font-size="10" font-weight="normal">AEST/AEDT</tspan>
+    </text>
+
+    <!-- Smaller orange/yellow circle above the big one with double border -->
+    <!-- y = cy_big - (r_big + gap) + r_small, so they don't overlap -->
+    <g id="small-group">
+      <!-- Layer 1: Lightest orange background circle -->
+      <circle id="small-outer"
+              fill="#fbbf24"
+              cx="300" cy="222" r="48"></circle>
+      <!-- Layer 2: Medium orange gear shape border -->
+      <path id="small-gear-border"
+            fill="#f59e0b"
+            stroke="#9a3412"
+            stroke-width="1"
+            d=""
+            transform="translate(300, 222)"></path>
+      <!-- Layer 3: Next darkest orange circle fill -->
+      <circle id="small-inner"
+              fill="#c7690e"
+              stroke="#9a3412"
+              stroke-width="1"
+              cx="300" cy="222" r="40"></circle>
+      <!-- Layer 4: Darkest orange interior gear pattern -->
+      <path id="small-gear"
+            fill="#9a3412"
+            stroke="#ffffff"
+            stroke-width="0.5"
+            d=""
+            transform="translate(300, 222)"></path>
+    </g>
+    
+    <!-- Label for orange circle -->
+    <text id="small-label" x="300" y="222" text-anchor="middle" dominant-baseline="middle" 
+          fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="normal">
+      <tspan x="300" dy="-6">FSS</tspan>
+      <tspan x="300" dy="20" font-size="14" font-weight="normal">24/7</tspan>
+    </text>
+
+    <!-- Right-side semi-circular arc that starts above the small circle and ends below the big circle.
+         Drawn as an SVG path using an elliptical arc (A) command. -->
+    <path id="enclosing-arc"
+          class="arc-stroke"
+          d="" fill="none" stroke-width="6" stroke-linecap="round"></path>
+    
+  </svg>
+
+  <script src="helper.js"></script>
+  <script src="diagram-core-absolute.js"></script>
+  <script src="diagram-init-absolute.js"></script>
+
+
+</body>
+</html>

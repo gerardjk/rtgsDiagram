@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Particles</title>
+</head>
+<body>
+    <h3>Testing particle creation</h3>
+    <button onclick="testParticles()">Create Test Particles</button>
+    <button onclick="clearParticles()">Clear Particles</button>
+    <br><br>
+    <iframe src="diagram.html" width="100%" height="600"></iframe>
+
+    <script>
+        function testParticles() {
+            const frame = document.querySelector('iframe');
+            const win = frame.contentWindow;
+
+            // Wait for diagram to load
+            setTimeout(() => {
+                if (win.createFlowParticles) {
+                    console.log('Creating test particles...');
+                    win.createFlowParticles('npp-to-fss-path', 6, { duration: 6000, size: 5 });
+                    win.createFlowParticles('npp-to-adi-line', 6, { duration: 6000, size: 5, reverse: true });
+                } else {
+                    console.error('createFlowParticles not found');
+                }
+            }, 2000);
+        }
+
+        function clearParticles() {
+            const frame = document.querySelector('iframe');
+            const win = frame.contentWindow;
+            if (win.clearFlowParticles) {
+                win.clearFlowParticles();
+                console.log('Particles cleared');
+            }
+        }
+    </script>
+</body>
+</html>

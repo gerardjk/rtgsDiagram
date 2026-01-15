@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RITS Diagram with Legend (Dark Mode)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #000000;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      box-sizing: border-box;
+      gap: 30px;
+    }
+    #diagram {
+      width: auto;
+      height: auto;
+      max-width: 70vw;
+      max-height: 95vh;
+      flex-shrink: 0;
+    }
+    #legend-container {
+      max-width: 350px;
+      width: 100%;
+      padding: 15px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      border: 2px solid #333;
+      align-self: flex-start;
+      margin-top: 20px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .line-sample {
+      width: 80px;
+      height: 20px;
+      margin-right: 10px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .line-label {
+      color: #e5e7eb;
+      font-size: 11px;
+      font-family: sans-serif;
+      font-weight: normal;
+    }
+  </style>
+</head>
+<body>
+  <!-- SVG canvas: 700×1000 to accommodate extended arc -->
+  <svg id="diagram" viewBox="-570 -75 1500 1100" preserveAspectRatio="xMidYMid meet" aria-label="circles with enclosing arc">
+    <defs>
+      <!-- Colors -->
+      <style>
+        .big-fill { fill: #3b82f6; }       /* blue fill */
+        .big-stroke { stroke: #1e3a8a; }   /* dark blue stroke */
+        .small-fill { fill: #F5FF00; }     /* orange/yellow fill */
+        .small-stroke { stroke: #9a3412; } /* dark orange stroke */
+        .arc-stroke { stroke: #e5e7eb; }   /* light grey arc for dark mode */
+      </style>
+      <!-- Gradient for figure-8 effect -->
+      <radialGradient id="darkEdgeGradient">
+        <stop offset="85%" stop-color="transparent"/>
+        <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0.8"/>
+      </radialGradient>
+    </defs>
+
+    <!-- ----- PARAMS (edit these numbers) ----- -->
+    <!-- Diagram center line (x-only). All circles share this x. -->
+    <!-- Change cx to shift everything left/right together. -->
+    <g id="params" data-cx="300" data-cy-big="450" data-r-big="113" data-gap="20" data-r-small="70"
+       data-arc-r="320" data-arc-angle-deg="220" data-arc-offset-deg="0" data-stroke-width="8"></g>
+    <!-- -------------------------------------- -->
+
+    <!-- Background elements group -->
+    <g id="background-elements"></g>
+
+    <!-- Background rectangle for blue dots -->
+    <rect id="blue-dots-background" fill="none" stroke="none" />
+
+    <!-- Group for blue connecting lines (rendered first so they appear under circles) -->
+    <g id="blue-connecting-lines"></g>
+
+    <!-- Group for red connecting lines (rendered before blue circle so they appear under it) -->
+    <g id="red-connecting-lines"></g>
+
+    <!-- Group for orange connecting lines (rendered before blue circle so they appear under it) -->
+    <g id="orange-connecting-lines"></g>
+
+    <!-- Group for administrative red/yellow lines into the blue circle -->
+    <g id="admin-connecting-lines"></g>
+
+    <!-- Group for labels -->
+    <g id="dot-labels"></g>
+
+    <!-- Large blue circle with double border -->
+    <!-- Uses: cx (shared), cy_big, r_big -->
+    <g id="big-group">
+      <!-- Layer 1: Lightest blue background circle -->
+      <circle id="big-outer"
+              fill="#04d9ff"
+              fill-opacity="0.5"
+              cx="300" cy="450" r="113"></circle>
+      <!-- Layer 2: Medium blue gear shape border -->
+      <path id="big-gear-border"
+            fill="#03a8cc"
+            stroke="#ffffff"
+            stroke-width="1"
+            d=""
+            transform="translate(300, 450)"></path>
+      <!-- Layer 3: Next darkest blue circle fill -->
+      <circle id="big-inner"
+              fill="#027799"
+              stroke="#015166"
+              stroke-width="1"
+              cx="300" cy="450" r="97"></circle>
+      <!-- Layer 4: Darkest blue interior gear pattern -->
+      <path id="big-gear"
+            fill="#013B4A"
+            stroke="#ffffff"
+            stroke-width="0.5"
+            d=""
+            transform="translate(300, 450)"></path>
+    </g>
+
+    <!-- Label for blue circle -->
+    <text id="big-label" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
+      <tspan x="300" dy="-40" font-size="20">RITS</tspan>
+      <tspan x="300" dy="20">Settlement</tspan>
+      <tspan x="300" dy="20">Engine</tspan>
+      <tspan x="300" dy="22" font-size="12" font-weight="normal">Monday - Friday</tspan>
+      <tspan x="300" dy="16" font-size="12" font-weight="normal">7:30-22:00</tspan>
+      <tspan x="300" dy="16" font-size="10" font-weight="normal">AEST/AEDT</tspan>
+    </text>
+
+    <!-- Smaller orange/yellow circle above the big one with double border -->
+    <!-- y = cy_big - (r_big + gap) + r_small, so they don't overlap -->
+    <g id="small-group">
+      <!-- Layer 1: Light orangey-yellow background circle -->
+      <circle id="small-outer"
+              fill="#FFE680"
+              fill-opacity="0.5"
+              cx="300" cy="222" r="48"></circle>
+      <!-- Layer 2: Neon yellow gear shape border -->
+      <path id="small-gear-border"
+            fill="#FFFF00"
+            stroke="#ffffff"
+            stroke-width="1"
+            d=""
+            transform="translate(300, 222)"></path>
+      <!-- Layer 3: More orange circle fill -->
+      <circle id="small-inner"
+              fill="#F4A842"
+              stroke="#D35400"
+              stroke-width="1"
+              cx="300" cy="222" r="40"></circle>
+      <!-- Layer 4: Much darker orange interior gear pattern -->
+      <path id="small-gear"
+            fill="#6B1F0E"
+            stroke="#ffffff"
+            stroke-width="0.5"
+            d=""
+            transform="translate(300, 222)"></path>
+    </g>
+
+    <!-- Label for orange circle -->
+    <text id="small-label" x="300" y="222" text-anchor="middle" dominant-baseline="middle"
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
+      <tspan x="300" dy="-6">FSS</tspan>
+      <tspan x="300" dy="20" font-size="13" font-weight="normal">24/7</tspan>
+    </text>
+
+    <!-- Right-side semi-circular arc that starts above the small circle and ends below the big circle.
+         Drawn as an SVG path using an elliptical arc (A) command. -->
+    <path id="enclosing-arc"
+          class="arc-stroke"
+          d="" fill="none" stroke-width="6" stroke-linecap="round"></path>
+
+  </svg>
+
+  <!-- Legend -->
+  <div id="legend-container"></div>
+
+  <!-- Load diagram modules in dependency order -->
+  <script src="helper.js"></script>
+  <script src="diagram-config.js"></script>
+  <script src="diagram-circles.js"></script>
+  <script src="diagram-boxes.js"></script>
+  <script src="diagram-lines.js"></script>
+  <script src="diagram-labels.js"></script>
+  <script src="diagram-core-refactored.js"></script>
+  <script src="diagram-init.js"></script>
+  <script src="diagram-export.js"></script>
+
+  <!-- Legend generation script -->
+  <script>
+    // All lines from the diagram in specified order
+    const allLines = [
+      { color: '#5dd9b8', strokeWidth: 6, style: 'solid', name: 'ISO 20022 (SWIFT)' },
+      { color: '#00FF33', strokeWidth: 6, style: 'solid', name: 'ISO 20022 CLS PvP' },
+      { color: '#5B8FE8', strokeWidth: 6, style: 'solid', name: 'ASX EXIGO' },
+      { color: '#ab20fd', strokeWidth: 2, style: 'double', name: 'Settlement-only Batch XML' },
+      { color: '#ab20fd', strokeWidth: 1, style: 'triple', name: 'Reservation Batch XML' },
+      { color: '#C0C0C0', strokeWidth: 1.5, style: 'double', name: 'LVSS FSI XML' },
+      { color: '#ff073a', strokeWidth: 4, style: 'solid', name: 'AusPayNet DE (ABA) file' },
+      { color: '#808080', strokeWidth: 1, style: 'solid', name: 'APCS Image Exchange Presentment' },
+      { color: 'rgb(100,80,180)', strokeWidth: 2, style: 'solid', name: 'EPAL Settlement File Formats' },
+      { color: 'rgb(216,46,43)', strokeWidth: 2, style: 'solid', name: 'Mastercard IPM File Format' },
+      { color: '#FFA500', strokeWidth: 2, style: 'solid', name: 'Visa Base II File Format' },
+      { color: '#27AEE3', strokeWidth: 1, style: 'double', name: 'Proprietary Scheme Formats (AMEX / UnionPay / Diners)' },
+      { color: '#FF0090', strokeWidth: 3, style: 'solid', name: 'PEXA ELNO Messages' },
+      { color: 'rgb(239,136,51)', strokeWidth: 3, style: 'solid', name: 'Sympli ELNO Messages' }
+    ];
+
+    // Create SVG line sample
+    function createLineSample(lineConfig) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '80');
+      svg.setAttribute('height', '20');
+      svg.setAttribute('viewBox', '0 0 80 20');
+
+      if (lineConfig.style === 'triple') {
+        // Triple line
+        const gap = 1.5;
+        const positions = [-gap, 0, gap];
+        positions.forEach(offset => {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', '5');
+          line.setAttribute('y1', `${10 + offset}`);
+          line.setAttribute('x2', '75');
+          line.setAttribute('y2', `${10 + offset}`);
+          line.setAttribute('stroke', lineConfig.color);
+          line.setAttribute('stroke-width', lineConfig.strokeWidth);
+          line.setAttribute('stroke-linecap', 'round');
+          svg.appendChild(line);
+        });
+      } else if (lineConfig.style === 'double') {
+        // Double line
+        const gap = 1;
+        const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line1.setAttribute('x1', '5');
+        line1.setAttribute('y1', `${10 - gap}`);
+        line1.setAttribute('x2', '75');
+        line1.setAttribute('y2', `${10 - gap}`);
+        line1.setAttribute('stroke', lineConfig.color);
+        line1.setAttribute('stroke-width', lineConfig.strokeWidth);
+        line1.setAttribute('stroke-linecap', 'round');
+
+        const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line2.setAttribute('x1', '5');
+        line2.setAttribute('y1', `${10 + gap}`);
+        line2.setAttribute('x2', '75');
+        line2.setAttribute('y2', `${10 + gap}`);
+        line2.setAttribute('stroke', lineConfig.color);
+        line2.setAttribute('stroke-width', lineConfig.strokeWidth);
+        line2.setAttribute('stroke-linecap', 'round');
+
+        svg.appendChild(line1);
+        svg.appendChild(line2);
+      } else {
+        // Single line
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', '5');
+        line.setAttribute('y1', '10');
+        line.setAttribute('x2', '75');
+        line.setAttribute('y2', '10');
+        line.setAttribute('stroke', lineConfig.color);
+        line.setAttribute('stroke-width', lineConfig.strokeWidth);
+        line.setAttribute('stroke-linecap', 'round');
+
+        if (lineConfig.style === 'dotted') {
+          line.setAttribute('stroke-dasharray', '5,5');
+        } else if (lineConfig.style === 'dashed') {
+          line.setAttribute('stroke-dasharray', '10,5');
+        }
+
+        svg.appendChild(line);
+      }
+
+      return svg;
+    }
+
+    // Create legend item
+    function createLegendItem(lineConfig) {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+
+      const sampleContainer = document.createElement('div');
+      sampleContainer.className = 'line-sample';
+      sampleContainer.appendChild(createLineSample(lineConfig));
+
+      const label = document.createElement('div');
+      label.className = 'line-label';
+      label.textContent = lineConfig.name;
+
+      item.appendChild(sampleContainer);
+      item.appendChild(label);
+
+      return item;
+    }
+
+    // Create dot sample
+    function createDotSample(color, strokeColor) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '80');
+      svg.setAttribute('height', '20');
+      svg.setAttribute('viewBox', '0 0 80 20');
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', '40');
+      circle.setAttribute('cy', '10');
+      circle.setAttribute('r', '4');
+      circle.setAttribute('fill', color);
+      circle.setAttribute('stroke', strokeColor || '#000000');
+      circle.setAttribute('stroke-width', '1');
+      svg.appendChild(circle);
+
+      return svg;
+    }
+
+    // Create dot legend item
+    function createDotLegendItem(color, strokeColor, name) {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+
+      const sampleContainer = document.createElement('div');
+      sampleContainer.className = 'line-sample';
+      sampleContainer.appendChild(createDotSample(color, strokeColor));
+
+      const label = document.createElement('div');
+      label.className = 'line-label';
+      label.textContent = name;
+
+      item.appendChild(sampleContainer);
+      item.appendChild(label);
+
+      return item;
+    }
+
+    // Initialize legend
+    window.addEventListener('DOMContentLoaded', function() {
+      const container = document.getElementById('legend-container');
+
+      // Add all lines
+      allLines.forEach(line => {
+        container.appendChild(createLegendItem(line));
+      });
+
+      // Add dots at the bottom
+      container.appendChild(createDotLegendItem('#3b82f6', '#1e3a8a', 'ESA (unconnected use Settlement Agent)'));
+      container.appendChild(createDotLegendItem('#FFFF00', '#ffffff', 'FSS Allocations'));
+    });
+  </script>
+
+</body>
+</html>

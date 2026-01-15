@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RITS Diagram Legend - Export</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 20px;
+      font-family: Arial, sans-serif;
+      background: white;
+    }
+
+    #export-container {
+      background: white;
+      padding: 20px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .line-sample {
+      width: 200px;
+      height: 30px;
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+    }
+
+    .line-label {
+      color: #333;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    button {
+      margin: 20px 0;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    #canvas-container {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="exportHighRes()">Export as High-Resolution PNG</button>
+
+  <div id="export-container">
+    <div id="legend-container"></div>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="export-canvas"></canvas>
+  </div>
+
+  <script src="legend.js"></script>
+  <script>
+    async function exportHighRes() {
+      const scale = 4; // 4x resolution for high quality
+      const container = document.getElementById('export-container');
+
+      // Create canvas with high resolution
+      const canvas = document.getElementById('export-canvas');
+      const width = 800; // Fixed width for consistency
+      const items = container.querySelectorAll('.legend-item');
+      const itemHeight = 40;
+      const padding = 40;
+      const height = items.length * itemHeight + padding;
+
+      // Set actual size in memory (4x scale for high res)
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+
+      // Set display size (CSS pixels)
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+
+      const ctx = canvas.getContext('2d');
+
+      // Scale context to match device pixel ratio
+      ctx.scale(scale, scale);
+
+      // White background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw each legend item
+      let yOffset = 30;
+
+      // Process items sequentially to ensure correct order
+      for (const item of items) {
+        const svg = item.querySelector('svg');
+        const label = item.querySelector('.line-label');
+
+        if (svg && label) {
+          // Convert SVG to data URL
+          const svgData = new XMLSerializer().serializeToString(svg);
+          const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+          const url = URL.createObjectURL(svgBlob);
+
+          // Create a promise to handle image loading
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = function() {
+              // Draw SVG line sample
+              ctx.drawImage(img, 20, yOffset - 15, 200, 30);
+
+              // Draw text label
+              ctx.font = 'bold 18px Arial';
+              ctx.fillStyle = '#333';
+              ctx.fillText(label.textContent, 240, yOffset + 5);
+
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            img.src = url;
+          });
+        }
+
+        yOffset += itemHeight;
+      }
+
+      // Convert canvas to blob and download
+      canvas.toBlob(function(blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'rits-legend-highres.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 'image/png', 1.0); // Maximum quality
+    }
+  </script>
+</body>
+</html>
