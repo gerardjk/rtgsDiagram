@@ -44,7 +44,8 @@ function initializeDiagram() {
       #diagram .stage-four-label { transition: opacity 0.5s ease-in-out; }
       #diagram .stage-five-element { transition: opacity 0.5s ease-in-out; }
       #diagram .stage-six-element { transition: opacity 0.5s ease-in-out; }
-      #diagram .stage-seven-element { transition: opacity 1s ease-in-out; }
+      #diagram .stage-seven-element { transition: opacity 0.5s ease-in-out; }
+      #diagram .stage-eight-element { transition: opacity 1s ease-in-out; }
     `;
     document.head.appendChild(styleEl);
   };
@@ -932,13 +933,32 @@ function initializeDiagram() {
       if (animationSkipped || sixthStageStarted) return;
       sixthStageStarted = true;
 
-      // Stage 6: All remaining boxes (rects) and their labels
+      // Stage 6: Most remaining boxes (excluding specific settlement/clearing boxes)
+      // List of IDs to exclude (will be shown in stage 7)
+      const excludeIds = ['apcs-box', 'becs-box', 'cshd-box', 'cecs-box', 'gabs-box',
+                         'mcau-box', 'essb-box', 'pexa-box', 'asxf-box', 'asxb-box',
+                         'administered-batches-box'];
+
       document.querySelectorAll('.diagram-hidden:not(.diagram-visible)').forEach(el => {
         const tagName = el.tagName.toLowerCase();
+        const elementId = el.getAttribute('id');
         // Only include boxes (rect), text labels, and circles - NOT groups/lines/paths
-        if (tagName === 'rect' || tagName === 'text' || tagName === 'circle') {
-          el.classList.add('stage-six-element');
-          el.classList.add('diagram-visible');
+        // Also exclude the specific boxes that will be in stage 7
+        if ((tagName === 'rect' || tagName === 'text' || tagName === 'circle') &&
+            !excludeIds.includes(elementId)) {
+          // Also check if it's a label for one of the excluded boxes
+          let isExcludedLabel = false;
+          if (tagName === 'text') {
+            const textContent = el.textContent.trim();
+            if (['APCS', 'BECS', 'CSHD', 'CECS', 'GABS', 'MCAU', 'ESSB', 'PEXA',
+                 'ASXF', 'ASXB', 'Administered batches'].includes(textContent)) {
+              isExcludedLabel = true;
+            }
+          }
+          if (!isExcludedLabel) {
+            el.classList.add('stage-six-element');
+            el.classList.add('diagram-visible');
+          }
         }
       });
 
@@ -946,19 +966,55 @@ function initializeDiagram() {
       enforceStageVisibility(currentStage);
     };
 
-    // Function to start seventh stage independently
+    // Function to start seventh stage independently (settlement/clearing boxes)
     let seventhStageStarted = false;
     window.startSeventhAnimationStage = () => {
       if (animationSkipped || seventhStageStarted) return;
       seventhStageStarted = true;
+
+      // Stage 7: Specific settlement/clearing boxes
+      const includeIds = ['apcs-box', 'becs-box', 'cshd-box', 'cecs-box', 'gabs-box',
+                         'mcau-box', 'essb-box', 'pexa-box', 'asxf-box', 'asxb-box',
+                         'administered-batches-box'];
+
+      // First add the boxes
+      includeIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.classList.contains('diagram-visible')) {
+          el.classList.add('stage-seven-element');
+          el.classList.add('diagram-visible');
+        }
+      });
+
+      // Then add their text labels
+      document.querySelectorAll('.diagram-hidden:not(.diagram-visible)').forEach(el => {
+        if (el.tagName.toLowerCase() === 'text') {
+          const textContent = el.textContent.trim();
+          if (['APCS', 'BECS', 'CSHD', 'CECS', 'GABS', 'MCAU', 'ESSB', 'PEXA',
+               'ASXF', 'ASXB', 'Administered batches'].includes(textContent)) {
+            el.classList.add('stage-seven-element');
+            el.classList.add('diagram-visible');
+          }
+        }
+      });
+
+      currentStage = Math.max(currentStage, 7);
+      enforceStageVisibility(currentStage);
+    };
+
+    // Function to start eighth stage independently (lines)
+    let eighthStageStarted = false;
+    window.startEighthAnimationStage = () => {
+      if (animationSkipped || eighthStageStarted) return;
+      eighthStageStarted = true;
       cancelStageTimers();
-      currentStage = 7;
+      currentStage = 8;
       if (stageVisibilityObserver) {
         stageVisibilityObserver.disconnect();
         stageVisibilityObserver = null;
       }
 
-      // Stage 7: All remaining lines (with line-drawing animation)
+      // Stage 8: All remaining lines (with line-drawing animation)
       // Collect all elements to reveal
       const elementsToReveal = [];
 
@@ -982,7 +1038,7 @@ function initializeDiagram() {
 
       // First add transition class to all elements
       elementsToReveal.forEach(el => {
-        el.classList.add('stage-seven-element');
+        el.classList.add('stage-eight-element');
       });
 
       // Then trigger visibility in next frame so transition actually animates
@@ -992,7 +1048,7 @@ function initializeDiagram() {
           el.classList.remove('diagram-hidden');
         });
 
-        // Start flow particles on multiple lines immediately when stage 7 is done
+        // Start flow particles on multiple lines immediately when stage 8 is done
         animationTimeouts.push(setTimeout(() => {
           if (animationSkipped) return;
           if (typeof window.clearFlowParticles === 'function') {
@@ -11893,8 +11949,9 @@ if (window.makeInteractive) {
     third: 300,
     fourth: 300,
     fifth: 300,
-    sixth: 300,
-    seventh: 300  // Same delay as other stages
+    sixth: 200,
+    seventh: 200,
+    eighth: 300
   };
   const stageTimers = {
     first: null,
@@ -11903,7 +11960,8 @@ if (window.makeInteractive) {
     fourth: null,
     fifth: null,
     sixth: null,
-    seventh: null
+    seventh: null,
+    eighth: null
   };
   const scheduleStages = () => {
     let accumulated = 0;
@@ -11976,6 +12034,16 @@ if (window.makeInteractive) {
         }
       }, accumulated);
       animationTimeouts.push(stageTimers.seventh);
+    }
+    if (typeof window.startEighthAnimationStage === 'function') {
+      accumulated += stageDelays.eighth;
+      stageTimers.eighth = setTimeout(() => {
+        stageTimers.eighth = null;
+        if (!animationSkipped) {
+          window.startEighthAnimationStage();
+        }
+      }, accumulated);
+      animationTimeouts.push(stageTimers.eighth);
     }
   };
   scheduleStages();
