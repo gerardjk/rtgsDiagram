@@ -78,13 +78,13 @@ const fmtMillionsToAud = (m) => {
  */
 const LINE_TOOLTIPS = {
   ISO20022_SWIFT: {
-    title: 'ISO 20022 over SWIFT',
+    title: 'ISO 20022 (SWIFT)',
     description: 'Structured messaging standard for payment instructions. SWIFT delivers messages; RITS settles.',
     lineStyle: true
   },
 
   CLS_PVP: {
-    title: 'ISO 20022 CLS PvP',
+    title: 'ISO 20022 CLS PvP (SWIFT)',
     description: 'Payment-versus-payment FX settlement. Links both currency legs so neither settles without the other.',
     lineStyle: true
   },
@@ -138,8 +138,8 @@ const LINE_TOOLTIPS = {
   },
 
   PROPRIETARY_SCHEME_FORMATS: {
-    title: 'Scheme-specific formats',
-    description: 'Other card network clearing formats (Amex, Diners, etc.).',
+    title: 'Proprietary Scheme Specific Formats',
+    description: 'Other card network clearing formats (Amex, Diners, UnionPay, etc.).',
     lineStyle: true
   },
 
@@ -208,11 +208,11 @@ const makeInstitutionTooltip = ({
         : '';
 
   const settlementAgentNote = usesSettlementAgent
-    ? 'This institution uses a settlement agent, relying on another ESA holder to settle on its behalf rather than settling directly in its own name.'
+    ? 'This institution uses a settlement agent.'
     : '';
 
   const fssNote = isFssMember
-    ? 'This institution is an FSS participant, which means it can settle retail payments with other FSS participants in real time through the RBA’s Fast Settlement Service (24/7), rather than being limited to settling during RITS operating hours.'
+    ? 'This institution is an FSS participant.'
     : '';
 
   return {
@@ -396,9 +396,10 @@ const tooltipContent = {
     description:
       'The RBA\'s central settlement system. Manages Exchange Settlement Accounts (ESAs) and settles high-value payments (RTGS) and net retail obligations (LVSS).',
     details: paragraphs(
-      `In ${FLOW_SNAPSHOT.rtgs.asAt}, RITS settled ${fmtInt(FLOW_SNAPSHOT.rtgs.total.paymentsAvgDaily)} payments/day averaging ${fmtMillionsToAud(FLOW_SNAPSHOT.rtgs.total.valueAudMillionsAvgDaily)}/day.`,
-      '**RTGS mode**: settles payments individually in real time. **Net settlement mode**: settles aggregated positions from retail clearing streams via LVSS.',
-      'Instructions arrive via **SWIFT** (global messaging network) or **COIN** (domestic network for clearing files and NPP traffic). The **Fast Settlement Service** extends settlement to 24/7 for NPP.'
+      'RITS was introduced on 22 June 1998, making Australia one of the early adopters of real-time gross settlement. Prior to RTGS, banks settled most transactions at 9am the following day, creating significant settlement risk for high-value payments. RTGS eliminated this risk by settling each payment individually and immediately in central bank money.',
+      'For its first two decades, RITS operated only during business hours and served primarily wholesale payments—large interbank transfers, securities settlement, and CLS foreign exchange obligations. Retail payments continued to settle on a deferred net basis through batch systems.',
+      `This changed in 2018 when the Fast Settlement Service (FSS) was added to RITS, extending settlement to 24/7 for NPP payments. For the first time, retail payments could achieve real-time settlement finality in central bank money, around the clock.`,
+      `In ${FLOW_SNAPSHOT.rtgs.asAt}, RITS settled ${fmtInt(FLOW_SNAPSHOT.rtgs.total.paymentsAvgDaily)} payments/day averaging ${fmtMillionsToAud(FLOW_SNAPSHOT.rtgs.total.valueAudMillionsAvgDaily)}/day. Instructions arrive via <strong>SWIFT</strong> (global messaging) or <strong>COIN</strong> (domestic network).`
     ),
     link: 'https://www.rba.gov.au/payments-and-infrastructure/rits/about.html'
   },
@@ -409,8 +410,10 @@ const tooltipContent = {
     description:
       'The RBA\'s 24/7 settlement service for fast payments. Settles NPP transactions in central bank money around the clock.',
     details: paragraphs(
+      'The FSS was launched in February 2018 alongside the NPP, purpose-built by the RBA to provide real-time settlement for the new fast payments system. Before FSS, RITS only operated during business hours—adequate for wholesale payments but incompatible with consumer expectations for instant, always-available payments. FSS extended central bank settlement to 24/7 for the first time.',
+      'Currently, FSS supports retail payments only (NPP transactions). Wholesale payments continue to settle through traditional RTGS during business hours. However, the infrastructure demonstrates that 24/7 settlement in central bank money is technically feasible.',
       `In ${FLOW_SNAPSHOT.fss.asAt}, FSS averaged ${fmtInt(FLOW_SNAPSHOT.fss.total.paymentsAvgDaily)} payments/day with value of ${fmtMillionsToAud(FLOW_SNAPSHOT.fss.total.valueAudMillionsAvgDaily)}/day. ${FLOW_SNAPSHOT.fss.unitNote}`,
-      'NPP clears payments instantly; FSS provides settlement finality by moving funds between participants\' allocated settlement balances. Participants must maintain sufficient liquidity for settlement.'
+      'FSS participants maintain two types of balances: their main ESA balance (for business hours) and an FSS Balance (for 24/7 settlement). Outside business hours, a participant\'s entire ESA balance is held in their FSS Balance. After-hours liquidity is supported by <strong>Open Repos</strong>—a standing facility allowing participants to access liquidity without active management.'
     ),
     hours: '24/7/365',
     link: 'https://www.rba.gov.au/payments-and-infrastructure/rits/about.html'
@@ -420,8 +423,11 @@ const tooltipContent = {
     title: 'FSS',
     subtitle: 'Fast Settlement Service',
     description:
-      'The RBA\'s 24/7 settlement service for NPP payments.',
-    details: 'Enables interbank settlement outside business hours. Participants pre-fund allocated settlement balances to support continuous operation.',
+      'The RBA\'s 24/7 settlement service for NPP payments, launched in 2018.',
+    details: paragraphs(
+      'FSS was purpose-built by the RBA to support the NPP, extending central bank settlement to 24/7 for retail payments. It currently supports retail only—wholesale payments still settle during RITS business hours.',
+      'After-hours liquidity is supported by <strong>Open Repos</strong>—a standing facility where participants can access central bank liquidity without active management.'
+    ),
     link: 'https://www.rba.gov.au/payments-and-infrastructure/rits/'
   },
 
@@ -429,7 +435,7 @@ const tooltipContent = {
 
   'swift-pds-box': {
     title: 'SWIFT',
-    subtitle: 'Secure financial messaging',
+    subtitle: 'Society for Worldwide Interbank Financial Telecommunication',
     description:
       'Global secure messaging network for financial institutions. Delivers payment instructions; does not move money.',
     details: 'SWIFT carries high-value payment instructions (HVCS) and batch settlement instructions into RITS. Settlement finality occurs when RITS moves ESA balances.',
@@ -508,71 +514,67 @@ const tooltipContent = {
     title: 'NPP Basic Infrastructure',
     subtitle: 'New Payments Platform (clearing layer)',
     description:
-      'Australia\'s real-time payments clearing infrastructure. Supports overlay services (Osko, PayID, PayTo). Settlement via FSS.',
-    prominentSystem: true,
+      'The core messaging and clearing infrastructure for Australia\'s real-time payments system, built and operated by SWIFT.',
     details: paragraphs(
+      'SWIFT was contracted by NPP Australia (now part of Australian Payments Plus) to build and operate the Basic Infrastructure that powers the NPP. This includes the central switching and addressing infrastructure that routes payment messages between participants in real time.',
       `In ${FLOW_SNAPSHOT.retail.asAt}, NPP processed ${fmtInt(FLOW_SNAPSHOT.retail.npp.volume)} payments totalling ${fmtMillionsToAud(FLOW_SNAPSHOT.retail.npp.valueAudMillions)}. Average ~A$${fmtInt(FLOW_SNAPSHOT.retail.npp.avgAudPerPayment)}/payment.`,
-      'Clearing occurs on NPP infrastructure; settlement finality delivered by FSS in central bank money.'
+      'Clearing occurs on NPP infrastructure; settlement finality is delivered by the RBA\'s Fast Settlement Service in central bank money.'
     ),
     hours: '24/7/365',
     link: 'https://www.rba.gov.au/payments-and-infrastructure/new-payments-platform/'
   },
 
   'npp-purple-box': {
-    preHeading: 'Australia Payments Plus',
+    preHeading: 'Australian Payments Plus',
     title: 'NPP',
     subtitle: 'New Payments Platform',
     description:
-      'Real-time account-to-account payments. Supports push payments and (via PayTo) authorised pull payments.',
+      'Australia\'s real-time retail payments infrastructure, launched in February 2018.',
     prominentSystem: true,
     details: paragraphs(
-      `In ${FLOW_SNAPSHOT.retail.asAt}: NPP handled ${fmtInt(FLOW_SNAPSHOT.retail.npp.volume)} payments; Direct Entry handled ${fmtInt(FLOW_SNAPSHOT.retail.directEntry.volume)} items.`,
-      'NPP growing rapidly but legacy batch systems remain embedded in enterprise payroll and billing processes.'
+      'The NPP originated from the RBA\'s 2012 Strategic Review of Innovation in the Payments System, which identified significant gaps in Australia\'s retail payments capabilities—particularly the lack of real-time payments, limited payment data, and no 24/7 availability. The Review set strategic objectives that prompted industry to develop new infrastructure.',
+      'Twelve ADIs became founding members of NPP Australia Limited in 2014, and SWIFT was contracted in 2015 to design, build and operate the platform. The RBA built the Fast Settlement Service (FSS) to provide 24/7 settlement in central bank money. NPP launched to the public on 13 February 2018.',
+      'In September 2021, the ACCC authorised the merger of NPP Australia, BPAY Group, and eftpos Payments Australia to form <strong>Australian Payments Plus</strong>. The merger brought together three complementary domestic payment schemes under unified ownership, aiming to accelerate innovation and compete more effectively with international card schemes.',
+      `In ${FLOW_SNAPSHOT.retail.asAt}: NPP handled ${fmtInt(FLOW_SNAPSHOT.retail.npp.volume)} payments; Direct Entry handled ${fmtInt(FLOW_SNAPSHOT.retail.directEntry.volume)} items. NPP is growing rapidly but legacy batch systems remain embedded in enterprise payroll and billing processes.`
     ),
     link: 'https://nppa.com.au/'
   },
 
   'osko-box': {
-    preHeading: 'Australia Payments Plus',
     title: 'Osko',
     subtitle: 'Fast payment service',
     description:
       'Consumer-facing NPP overlay for near-instant account-to-account transfers.',
-    prominentSystem: true,
     details: 'Runs on NPP clearing; settlement finality via FSS. Provides richer reference data than legacy transfers.'
   },
 
   'payid-box': {
-    preHeading: 'Australia Payments Plus',
     title: 'PayID and PayTo',
     subtitle: 'NPP overlay services',
     description:
       'PayID: links phone/email/ABN to account for easier addressing. PayTo: authorised payment agreements visible in banking apps.',
-    prominentSystem: true,
     details: paragraphs(
-      '**PayID** reduces misdirected payments by replacing BSB/account numbers with memorable identifiers.',
-      '**PayTo** replaces legacy direct debits with payer-controlled agreements—visible, pausable, cancellable in banking channels.'
+      '<strong>PayID</strong> reduces misdirected payments by replacing BSB/account numbers with memorable identifiers.',
+      '<strong>PayTo</strong> replaces legacy direct debits with payer-controlled agreements—visible, pausable, cancellable in banking channels.'
     ),
     link: 'https://www.auspayplus.com.au/solutions/payto'
   },
 
   'payto-box': {
-    preHeading: 'Australia Payments Plus',
     title: 'IPS',
     subtitle: 'International Payments Service',
     description:
       'Enables inbound cross-border payments to credit via NPP fast payment rails for the final AUD leg.',
-    prominentSystem: true,
-    details: 'Cross-border networks handle international leg; NPP/FSS handles domestic clearing and settlement in AUD.',
+    details: 'IPS currently supports <strong>incoming</strong> international payments only—funds arriving in Australia can be credited to recipients in real time via NPP. Outgoing international payments are not yet supported; they continue to use traditional correspondent banking channels. Cross-border networks handle the international leg; NPP/FSS handles domestic clearing and settlement in AUD.',
     link: 'https://www.auspayplus.com.au/solutions/npp'
   },
 
   'bsct-box': {
     title: 'BSCT',
-    subtitle: 'Basic Single Credit Transfer',
+    subtitle: 'Basic Single Credit Transfer (pacs.008)',
     description:
-      'Standard NPP message type for single account-to-account payments.',
-    details: 'One payer, one payee, one payment. Structured fields support automated reconciliation and compliance.'
+      'Standard NPP message type for single account-to-account payments, based on the ISO 20022 pacs.008 credit transfer message.',
+    details: 'One payer, one payee, one payment. The pacs.008 format provides structured fields for remittance data, supporting automated reconciliation and compliance screening.'
   },
 
   // ========== DIRECT ENTRY / BECS / LVSS / CHEQUES ==========
@@ -603,17 +605,19 @@ const tooltipContent = {
 
   'becn-box': {
     title: 'BECN',
-    subtitle: 'Bulk Electronic Clearing (Net)',
+    subtitle: 'Bulk Electronic Clearing System (Normal)',
     description:
       'Net settlement stream for bulk payments. Obligations netted across clearing cycle; only net amounts settled.',
-    details: 'Efficient for high-volume low-value payments—reduces settlement traffic and liquidity needs. Introduces timing dependencies around cut-offs.'
+    compactStyle: true,
+    details: 'Efficient for high-volume low-value payments—reduces settlement traffic and liquidity needs.'
   },
 
   'becg-box': {
     title: 'BECG',
-    subtitle: 'Bulk Electronic Clearing (Gross)',
+    subtitle: 'Bulk Electronic Clearing System (Government)',
     description:
       'Gross settlement stream for bulk payments where item-by-item settlement is preferred.',
+    compactStyle: true,
     details: 'Used where risk or operational rules favour gross treatment over multilateral netting.'
   },
 
@@ -765,8 +769,8 @@ const tooltipContent = {
     title: 'Other card schemes',
     subtitle: 'Additional networks',
     description:
-      'Other schemes (e.g., Amex, Diners) with different commercial models. Still require interbank settlement.',
-    details: 'Some operate three-party models. All ultimately rely on banking settlement for final value movement.'
+      'Other schemes (e.g., Amex, Diners, UnionPay) with different commercial models. Still require interbank settlement.',
+    details: 'Some operate three-party models (Amex, Diners). UnionPay is China\'s national card scheme with growing international presence. All ultimately rely on banking settlement for final value movement.'
   },
 
   'mcau-box': {
@@ -898,8 +902,13 @@ const tooltipContent = {
     title: 'CLS',
     subtitle: 'Continuous Linked Settlement',
     description:
-      'Global FX settlement system. Payment-versus-payment model links both currency legs to reduce settlement risk.',
-    details: 'Eliminates FX settlement risk where one party pays but doesn\'t receive. RBA supports AUD settlement via CLS.',
+      'Global FX settlement system that eliminates settlement risk in foreign exchange transactions through payment-versus-payment (PvP) settlement.',
+    details: paragraphs(
+      'CLS Bank was founded in 2002 by a consortium of major global banks to address FX settlement risk following concerns about Herstatt risk (the risk that one party pays out but never receives the other currency). It is owned by over 70 of the world\'s largest financial institutions and settles over US$6 trillion in FX transactions daily.',
+      'CLS settles FX transactions in 18 major currencies including AUD. It operates on a payment-versus-payment model: both legs of an FX trade are settled simultaneously, eliminating principal risk. Each settlement day, CLS calculates multilateral net positions and participants pay in net short positions during a defined window before receiving net long positions.',
+      'The RBA holds an account at CLS Bank to support AUD settlement, acting as the nostro agent for AUD. Australian banks participating in CLS settle their AUD obligations through this link to RITS.',
+      'CLS is designated by the RBA as a Systemically Important Payment System (SIPS)—one of only two systems with this designation in Australia, alongside RITS itself. This reflects the critical role CLS plays in financial stability by mitigating FX settlement risk for Australian institutions.'
+    ),
     link: 'https://www.cls-group.com/'
   },
 
@@ -911,9 +920,9 @@ const tooltipContent = {
     description:
       'Market operator and provider of clearing (CCPs) and settlement (SSFs) infrastructure. Cash leg settles via RITS.',
     details: paragraphs(
-      `Cash equities and listed options flow through **ASX Clear**, the primary CCP. In ${ASX_SNAPSHOT.asAt} the lit cash market averaged ${fmtInt(ASX_SNAPSHOT.cashMarkets.avgDailyTrades)} trades per day (≈A$${ASX_SNAPSHOT.cashMarkets.avgDailyValueAudBillions.toFixed(1)} billion). The CCP held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClear.toFixed(1)} billion in initial margin and called about A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.asxClear.toFixed(1)} billion of variation margin across a typical day.` ,
-      `**ASX Clear (Futures)** novates SPI futures, listed interest-rate contracts, and a portfolio of cleared OTC IRS. Over ${ASX_SNAPSHOT.asAt} it cleared ≈${fmtInt(ASX_SNAPSHOT.futures.avgDailyVolumeContracts)} contracts a day (≈A$${ASX_SNAPSHOT.futures.totalNotionalAudBillionsSingleSided.toFixed(0)} billion single-sided notional across the month) and held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClearFutures.toFixed(1)} billion of initial margin. Variation margin flows were roughly A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.asxClearFutures.toFixed(1)} billion per day.` ,
-      `Settlement facilities sit underneath the CCPs. **ASX Settlement (CHESS)** delivers DvP for equities with custody balances of ≈A$${ASX_SNAPSHOT.chess.holdingsAudBillions.toFixed(0)} billion and about ${ASX_SNAPSHOT.chess.dominantSettlementMessagesMillions.toFixed(1)} million settlement messages a month. **Austraclear** (also an SSF) safekeeps debt securities and structured finance paper with ≈A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(0)} billion on register and ~${fmtInt(ASX_SNAPSHOT.austraclear.tradeSourceMessagesThousands)}k trade-source messages in ${ASX_SNAPSHOT.asAt}.` ,
+      `Cash equities and listed options flow through <strong>ASX Clear</strong>, the primary CCP. In ${ASX_SNAPSHOT.asAt} the lit cash market averaged ${fmtInt(ASX_SNAPSHOT.cashMarkets.avgDailyTrades)} trades per day (≈A$${ASX_SNAPSHOT.cashMarkets.avgDailyValueAudBillions.toFixed(1)} billion). The CCP held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClear.toFixed(1)} billion in initial margin and called about A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.asxClear.toFixed(1)} billion of variation margin across a typical day.` ,
+      `<strong>ASX Clear (Futures)</strong> novates SPI futures, listed interest-rate contracts, and a portfolio of cleared OTC IRS. Over ${ASX_SNAPSHOT.asAt} it cleared ≈${fmtInt(ASX_SNAPSHOT.futures.avgDailyVolumeContracts)} contracts a day (≈A$${ASX_SNAPSHOT.futures.totalNotionalAudBillionsSingleSided.toFixed(0)} billion single-sided notional across the month) and held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClearFutures.toFixed(1)} billion of initial margin. Variation margin flows were roughly A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.asxClearFutures.toFixed(1)} billion per day.` ,
+      `Settlement facilities sit underneath the CCPs. <strong>ASX Settlement (CHESS)</strong> delivers DvP for equities with custody balances of ≈A$${ASX_SNAPSHOT.chess.holdingsAudBillions.toFixed(0)} billion and about ${ASX_SNAPSHOT.chess.dominantSettlementMessagesMillions.toFixed(1)} million settlement messages a month. <strong>Austraclear</strong> (also an SSF) safekeeps debt securities and structured finance paper with ≈A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(0)} billion on register and ~${fmtInt(ASX_SNAPSHOT.austraclear.tradeSourceMessagesThousands)}k trade-source messages in ${ASX_SNAPSHOT.asAt}.` ,
       'All ASX clearing and settlement cash legs pay and receive funds in RITS: CCP margin is managed intraday in central-bank money and the SSFs use delivery-versus-payment so securities and cash complete simultaneously.'
     ),
     sipsStyle: true
@@ -926,7 +935,8 @@ const tooltipContent = {
       'CCPs manage counterparty risk by becoming buyer to every seller and vice versa. Supported by margining.',
     details: paragraphs(
       `In ${ASX_SNAPSHOT.asAt}: initial margin held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.total.toFixed(1)}b (ASX Clear A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClear.toFixed(1)}b, Futures A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClearFutures.toFixed(1)}b). Variation margin ~A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.total.toFixed(1)}b.`,
-      '**ASX Clear**: cash equities and options. **ASX Clear (Futures)**: futures and some OTC derivatives.'
+      '<strong>ASX Clear</strong>: cash equities and options. <strong>ASX Clear (Futures)</strong>: futures and some OTC derivatives.',
+      'Although CHESS has a trade-by-trade RTGS feeder to RITS for DvP settlement, it is essentially never used in practice. The efficiency gains from multilateral netting are so significant that all participants choose to settle on a net basis instead.'
     ),
     link: 'https://www.rba.gov.au/fin-stability/financial-market-infrastructure/'
   },
@@ -947,8 +957,13 @@ const tooltipContent = {
     title: 'CHESS',
     subtitle: 'Clearing House Electronic Subregister System',
     description:
-      'ASX system for equities post-trade processing: settlement workflows and electronic shareholding register.',
-    details: 'Manages steps from trade execution to settlement and holdings update. Cash settlement via RITS.'
+      'ASX system for equities post-trade processing: settlement workflows, electronic shareholding register, and corporate actions.',
+    details: paragraphs(
+      'CHESS is the core post-trade infrastructure for Australian equities. It maintains the official register of share ownership, processes transfers between buyers and sellers, handles corporate actions (dividends, rights issues, etc.), and coordinates delivery-versus-payment settlement with RITS.',
+      'ASX attempted a multi-year project to replace CHESS with a distributed ledger technology (DLT) system. The project was abandoned in November 2022 after significant delays and cost overruns, with ASX writing off A$250 million. ASX is now pursuing a conventional technology rebuild.',
+      'CHESS continues to operate as critical national infrastructure while the replacement project proceeds.'
+    ),
+    sipsStyle: true
   },
 
   'chess-rtgs-box': {
@@ -965,9 +980,12 @@ const tooltipContent = {
     description:
       'Post-trade system for debt securities and money market instruments. Connects to RITS for cash settlement.',
     details: paragraphs(
-      `Holdings ~A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(1)}b (${ASX_SNAPSHOT.asAt}).`,
-      `RTGS settlement (${FLOW_SNAPSHOT.rtgs.asAt}): ${fmtInt(FLOW_SNAPSHOT.rtgs.austraclear.paymentsAvgDaily)} payments/day averaging ${fmtMillionsToAud(FLOW_SNAPSHOT.rtgs.austraclear.valueAudMillionsAvgDaily)}/day.`
-    )
+      `Austraclear is critical infrastructure for Australian financial markets. It holds ~A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(1)} billion in securities on register (${ASX_SNAPSHOT.asAt}), including Commonwealth Government bonds, state government bonds, bank bills, and corporate debt.`,
+      'Austraclear settles the highest-value transactions in the Australian financial system. Government bond trades, repo transactions for RBA open market operations, and interbank money market activity all settle through Austraclear with cash legs settling via RITS.',
+      `In ${FLOW_SNAPSHOT.rtgs.asAt}, Austraclear-related RTGS settlement averaged ${fmtInt(FLOW_SNAPSHOT.rtgs.austraclear.paymentsAvgDaily)} payments/day with value of ${fmtMillionsToAud(FLOW_SNAPSHOT.rtgs.austraclear.valueAudMillionsAvgDaily)}/day—by far the largest average transaction size of any settlement stream.`,
+      'Austraclear is essential for monetary policy implementation: the RBA conducts open market operations by buying and selling securities that settle through Austraclear.'
+    ),
+    sipsStyle: true
   },
 
   'lch-dot': {
@@ -996,17 +1014,17 @@ const tooltipContent = {
     subtitle: 'Obligations calculation',
     description:
       'Offsets obligations to reduce settlement payments. Efficient but concentrates risk at settlement time.',
-    lineStyle: true,
-    details: 'Netting compresses many trades to net positions. Reduces liquidity needs but creates settlement window dependencies.'
+    compactStyle: true,
+    details: 'Netting is so efficient that even though CHESS offers trade-by-trade RTGS settlement, it is essentially never used—all participants opt for net settlement instead.'
   },
 
   'trade-by-trade-box': {
     title: 'Trade-by-trade settlement',
     subtitle: 'Gross settlement approach',
     description:
-      'Settles each transaction individually. Reduces net exposure build-up but increases settlement traffic.',
-    lineStyle: true,
-    details: 'Trade-off: risk reduction vs. operational and liquidity efficiency.'
+      'CHESS supports trade-by-trade DvP RTGS settlement via a feeder to RITS, but this option is essentially never used.',
+    compactStyle: true,
+    details: 'The efficiency gains from multilateral netting are so significant that all participants choose net settlement instead.'
   },
 
   // DvP cash leg path

@@ -93,6 +93,7 @@
   </style>
 </head>
 <body>
+  <script>console.log('FIRST SCRIPT RUNNING');</script>
   <!-- SVG canvas: 700×1000 to accommodate extended arc -->
   <svg id="diagram" viewBox="-600 -165 1550 1100" preserveAspectRatio="xMidYMid meet" aria-label="circles with enclosing arc"
        xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -227,19 +228,38 @@
   </svg>
 
   <!-- Load modules in dependency order -->
-  <script src="helper.js"></script>
-  <script src="diagram-config.js"></script>
-  <script src="diagram-circles.js"></script>
-  <script src="diagram-boxes.js"></script>
-  <script src="diagram-lines.js"></script>
-  <script src="diagram-labels.js"></script>
-  <script src="diagram-tooltips-data.js"></script>
-  <script src="diagram-relationships.js"></script>
-  <script src="diagram-interactive.js"></script>
-  <script src="diagram-core-refactored.js"></script>
-  <script src="diagram-init.js"></script>
-  <script src="diagram-export.js"></script>
+  <script src="helper.js"></script><script>console.log('1-helper');</script>
+  <script src="diagram-config.js"></script><script>console.log('2-config');</script>
+  <script src="diagram-circles.js"></script><script>console.log('3-circles');</script>
+  <script src="diagram-boxes.js"></script><script>console.log('4-boxes');</script>
+  <script src="diagram-lines.js"></script><script>console.log('5-lines');</script>
+  <script src="diagram-labels.js"></script><script>console.log('6-labels');</script>
+  <script src="diagram-tooltips-data.js"></script><script>console.log('7-tooltips');</script>
+  <script src="diagram-relationships.js"></script><script>console.log('8-relationships');</script>
+  <script src="diagram-interactive.js"></script><script>console.log('9-interactive');</script>
+  <script>window.onerror = function(msg, url, line) { console.error('ERROR:', msg, 'at line', line); };</script>
+  <script src="diagram-core-refactored.js"></script><script>console.warn('10-core');</script>
+  <script src="diagram-init.js"></script><script>console.warn('11-init');</script>
+  <script src="diagram-export.js"></script><script>console.warn('12-export');</script>
+  <script>console.warn('ABOUT TO LOAD force-particles.js');</script>
   <script src="force-particles.js"></script>
+  <script>console.warn('AFTER force-particles.js');</script>
+  <script>
+    console.log('INLINE TEST: Scripts loaded');
+    setTimeout(() => {
+      const svg = document.getElementById('diagram');
+      console.log('INLINE TEST: SVG =', svg);
+      if (svg) {
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', '300');
+        dot.setAttribute('cy', '450');
+        dot.setAttribute('r', '20');
+        dot.setAttribute('fill', 'lime');
+        svg.appendChild(dot);
+        console.log('INLINE TEST: Lime dot added');
+      }
+    }, 5000);
+  </script>
 
 </body>
 </html>

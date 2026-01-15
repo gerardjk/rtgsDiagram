@@ -444,71 +444,7 @@ function initializeDiagram() {
       if (typeof window.clearFlowParticles === 'function') {
         window.clearFlowParticles(); // Clear any existing animations first
       }
-      if (typeof window.createFlowParticles === 'function') {
-        // Calculate consistent spacing
-        const nppToFssPath = document.getElementById('npp-to-fss-path');
-        const baseParticleCount = 6;
-        let desiredSpacing = 100;
-        const animationDuration = 6000;
-
-        if (nppToFssPath && nppToFssPath.getTotalLength) {
-          const nppToFssLength = nppToFssPath.getTotalLength();
-          desiredSpacing = nppToFssLength / baseParticleCount;
-        }
-
-        const getParticleCount = (pathId) => {
-          const path = document.getElementById(pathId);
-          if (path && path.getTotalLength) {
-            const pathLength = path.getTotalLength();
-            return Math.max(1, Math.round(pathLength / desiredSpacing));
-          }
-          return baseParticleCount;
-        };
-
-        // NPP to FSS circle
-        window.createFlowParticles('npp-to-fss-path', baseParticleCount, { duration: animationDuration, size: 5 });
-
-        // NPP to ADI line
-        const nppToAdiCount = getParticleCount('npp-to-adi-line');
-        window.createFlowParticles('npp-to-adi-line', nppToAdiCount, { duration: animationDuration, size: 5, reverse: true });
-
-        // Direct Entry lines - ensure they're updated first
-        if (typeof window.updateDirectEntryToAdiLine === 'function') {
-          window.updateDirectEntryToAdiLine();
-        }
-
-        // Delay slightly for DE lines to ensure paths are set
-        setTimeout(() => {
-          if (document.getElementById('directentry-to-adi-line')) {
-            const deLine = document.getElementById('directentry-to-adi-line');
-            const hasPath = deLine.getAttribute('d');
-            if (hasPath) {
-              const deLineCount = getParticleCount('directentry-to-adi-line');
-              window.createFlowParticles('directentry-to-adi-line', deLineCount, { duration: animationDuration, size: 5, reverse: true });
-            }
-          }
-
-          if (document.getElementById('maroon-horizontal-branch')) {
-            const maroonBranch = document.getElementById('maroon-horizontal-branch');
-            const hasPath = maroonBranch.getAttribute('d');
-            if (hasPath) {
-              const maroonBranchCount = getParticleCount('maroon-horizontal-branch');
-              window.createFlowParticles('maroon-horizontal-branch', maroonBranchCount, { duration: animationDuration, size: 5, reverse: true });
-            }
-          }
-        }, 100);
-
-        // BECS lines
-        if (document.getElementById('becn-to-becs-line')) {
-          const becnToBecsCount = getParticleCount('becn-to-becs-line');
-          window.createFlowParticles('becn-to-becs-line', becnToBecsCount, { duration: animationDuration, size: 5 });
-        }
-
-        if (document.getElementById('becg-to-becs-line')) {
-          const becgToBecsCount = getParticleCount('becg-to-becs-line');
-          window.createFlowParticles('becg-to-becs-line', becgToBecsCount, { duration: animationDuration, size: 5 });
-        }
-      }
+      // Particle creation moved to force-particles.js for better control
 
       // Remove the skip click handler
       document.removeEventListener('click', skipAnimation);
@@ -1051,77 +987,7 @@ function initializeDiagram() {
         // Start flow particles on multiple lines immediately when stage 8 is done
         animationTimeouts.push(setTimeout(() => {
           if (animationSkipped) return;
-          if (typeof window.clearFlowParticles === 'function') {
-            window.clearFlowParticles(); // Clear any existing animations first
-          }
-          if (typeof window.createFlowParticles === 'function') {
-            // Calculate consistent spacing based on NPP to FSS path
-            const nppToFssPath = document.getElementById('npp-to-fss-path');
-            const baseParticleCount = 6;
-            let desiredSpacing = 100; // Default spacing in pixels
-            const animationDuration = 6000; // Slower, consistent speed for all particles
-
-            if (nppToFssPath && nppToFssPath.getTotalLength) {
-              const nppToFssLength = nppToFssPath.getTotalLength();
-              desiredSpacing = nppToFssLength / baseParticleCount;
-            }
-
-            // Helper function to calculate particle count for consistent spacing
-            const getParticleCount = (pathId) => {
-              const path = document.getElementById(pathId);
-              if (path && path.getTotalLength) {
-                const pathLength = path.getTotalLength();
-                return Math.max(1, Math.round(pathLength / desiredSpacing));
-              }
-              return baseParticleCount;
-            };
-
-            // NPP to FSS circle (reference line)
-            window.createFlowParticles('npp-to-fss-path', baseParticleCount, { duration: animationDuration, size: 5 });
-
-            // NPP to ADI line (reverse: from ADIs to NPP)
-            const nppToAdiCount = getParticleCount('npp-to-adi-line');
-            window.createFlowParticles('npp-to-adi-line', nppToAdiCount, { duration: animationDuration, size: 5, reverse: true });
-
-            // Direct Entry lines (reverse: from ADIs/Non-ADIs boxes to DE)
-            // Ensure lines are updated first
-            if (typeof window.updateDirectEntryToAdiLine === 'function') {
-              window.updateDirectEntryToAdiLine();
-            }
-
-            // Add a small delay to ensure paths are fully rendered
-            setTimeout(() => {
-              if (document.getElementById('directentry-to-adi-line')) {
-                const deLine = document.getElementById('directentry-to-adi-line');
-                const hasPath = deLine.getAttribute('d');
-                if (hasPath) {
-                  const deLineCount = getParticleCount('directentry-to-adi-line');
-                  window.createFlowParticles('directentry-to-adi-line', deLineCount, { duration: animationDuration, size: 5, reverse: true });
-                }
-              }
-
-              if (document.getElementById('maroon-horizontal-branch')) {
-                const maroonBranch = document.getElementById('maroon-horizontal-branch');
-                const hasPath = maroonBranch.getAttribute('d');
-                if (hasPath) {
-                  const maroonBranchCount = getParticleCount('maroon-horizontal-branch');
-                  window.createFlowParticles('maroon-horizontal-branch', maroonBranchCount, { duration: animationDuration, size: 5, reverse: true });
-                }
-              }
-            }, 100); // Small delay to ensure paths are rendered
-
-            // BECN to BECS (from BECN to BECS)
-            if (document.getElementById('becn-to-becs-line')) {
-              const becnToBecsCount = getParticleCount('becn-to-becs-line');
-              window.createFlowParticles('becn-to-becs-line', becnToBecsCount, { duration: animationDuration, size: 5 });
-            }
-
-            // BECG to BECS (from BECG to BECS)
-            if (document.getElementById('becg-to-becs-line')) {
-              const becgToBecsCount = getParticleCount('becg-to-becs-line');
-              window.createFlowParticles('becg-to-becs-line', becgToBecsCount, { duration: animationDuration, size: 5 });
-            }
-          }
+          // Particle creation moved to force-particles.js for better control
         }, 0)); // Start immediately when stage 7 is done loading
       });
 

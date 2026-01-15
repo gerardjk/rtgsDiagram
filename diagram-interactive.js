@@ -378,13 +378,13 @@ function showTooltip(elementId, event, originalElementId) {
   const isRbaSystem = content.rbaSystem === true;
 
   let tooltipBgColor;
-  if (isLineStyle) {
+  if (isEsaElement) {
+    // ESA dots and lines: always use ESA blue (#04d9ff) with black text
+    tooltipBgColor = 'rgba(4, 217, 255, 0.97)';
+    tooltipContentElement.style.borderColor = 'rgba(0, 0, 0, 0.3)';
+  } else if (isLineStyle) {
     tooltipBgColor = lightenColor(elementColor, 0.6) || 'rgba(220, 220, 220, 0.97)';
     tooltipContentElement.style.borderColor = elementColor || 'rgba(100, 100, 100, 0.6)';
-  } else if (isEsaElement) {
-    // ESA dots and lines: use actual color (slightly transparent) with black text
-    tooltipBgColor = addAlpha(elementColor, 0.97) || 'rgba(100, 150, 255, 0.97)';
-    tooltipContentElement.style.borderColor = 'rgba(0, 0, 0, 0.3)';
   } else {
     tooltipBgColor = darkenColor(elementColor) || 'rgba(12, 12, 12, 0.97)';
     tooltipContentElement.style.borderColor = 'rgba(255, 255, 255, 0.45)';
@@ -1540,48 +1540,111 @@ function handleSvgClick(event) {
 const activeFlowAnimations = new Map();
 
 /**
- * Create multiple flowing particles on a path - single animation loop keeps them evenly spaced
- * @param {string} pathId - The ID of the path element
- * @param {number} count - Number of particles (default: 3)
+ * Helper to get point along a line element at a given progress (0-1)
+ */
+function getLinePointAtProgress(lineEl, progress) {
+  const x1 = parseFloat(lineEl.getAttribute('x1')) || 0;
+  const y1 = parseFloat(lineEl.getAttribute('y1')) || 0;
+  const x2 = parseFloat(lineEl.getAttribute('x2')) || 0;
+  const y2 = parseFloat(lineEl.getAttribute('y2')) || 0;
+  return {
+    x: x1 + (x2 - x1) * progress,
+    y: y1 + (y2 - y1) * progress
+  };
+}
+
+/**
+ * Helper to get length of a line element
+ */
+function getLineLength(lineEl) {
+  const x1 = parseFloat(lineEl.getAttribute('x1')) || 0;
+  const y1 = parseFloat(lineEl.getAttribute('y1')) || 0;
+  const x2 = parseFloat(lineEl.getAttribute('x2')) || 0;
+  const y2 = parseFloat(lineEl.getAttribute('y2')) || 0;
+  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+}
+
+// Global constants for consistent particle animation
+const PARTICLE_SPEED_DEFAULT = 80;    // pixels per second (default - faster)
+const PARTICLE_SPACING_DEFAULT = 80;  // pixels between particles
+
+/**
+ * Create flowing particles on a path or line with consistent speed and spacing
+ * @param {string} pathId - The ID of the path or line element
  * @param {Object} options - Configuration options
- * @param {string} options.color - Particle color (default: inherit from path stroke)
- * @param {number} options.size - Particle radius in pixels (default: 4)
- * @param {number} options.duration - Time for one particle to traverse the path in ms (default: 3000)
  * @param {boolean} options.reverse - Flow in reverse direction (default: false)
+ * @param {number} options.sizeOverride - Override particle size (default: auto from stroke-width)
+ * @param {number} options.startProgress - Start of active range 0-1 (default: 0)
+ * @param {number} options.endProgress - End of active range 0-1 (default: 1)
+ * @param {number} options.speed - Override speed in pixels per second (default: 80)
+ * @param {number} options.spacing - Override spacing between particles (default: 80)
  * @returns {SVGCircleElement[]} Array of created particles
  */
-function createFlowParticles(pathId, count = 3, options = {}) {
-  const path = document.getElementById(pathId);
-  if (!path || typeof path.getTotalLength !== 'function') {
-    console.warn(`Path not found or invalid: ${pathId}`);
+function createFlowParticles(pathId, countIgnored, options = {}) {
+  const element = document.getElementById(pathId);
+  if (!element) {
     return [];
   }
 
   const svg = document.getElementById('diagram');
   if (!svg) return [];
 
-  // Always use white particles for better visibility
-  const particleColor = '#ffffff';
-  const size = options.size || 4;
-  const duration = options.duration || 6000;
+  // Check if it's a path or line element
+  const tagName = element.tagName.toLowerCase();
+  const isPath = tagName === 'path' && typeof element.getTotalLength === 'function';
+  const isLine = tagName === 'line';
+
+  if (!isPath && !isLine) {
+    return [];
+  }
+
+  // Get element length
+  const elementLength = isPath ? element.getTotalLength() : getLineLength(element);
+  if (elementLength < 10) return []; // Skip very short elements
+
+  // Get stroke width from element to match particle size
+  const strokeWidth = parseFloat(element.getAttribute('stroke-width')) ||
+                      parseFloat(window.getComputedStyle(element).strokeWidth) || 6;
+  const size = options.sizeOverride || (strokeWidth / 2);  // Radius = half of stroke width
+
   const reverse = options.reverse || false;
-  const pathLength = path.getTotalLength();
+  const speed = options.speed || PARTICLE_SPEED_DEFAULT;
+  const spacing = options.spacing || PARTICLE_SPACING_DEFAULT;
+
+  // Range limits - particles only visible within this range of the path
+  const startProgress = options.startProgress ?? 0;
+  const endProgress = options.endProgress ?? 1;
+  const activeRange = endProgress - startProgress;
+  const activeLength = elementLength * activeRange;
+
+  // Calculate particle count based on spacing (only for active range)
+  const count = Math.max(1, Math.floor(activeLength / spacing));
+
+  // Calculate duration based on speed for the ACTIVE portion
+  const duration = (activeLength / speed) * 1000;  // Convert to ms
+
+  // Helper to get point at progress
+  const getPointAtProgress = (progress) => {
+    if (isPath) {
+      return element.getPointAtLength(progress * elementLength);
+    } else {
+      return getLinePointAtProgress(element, progress);
+    }
+  };
 
   // Create all particles
   const particles = [];
   for (let i = 0; i < count; i++) {
     const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     particle.setAttribute('r', size);
-    particle.setAttribute('fill', particleColor);
-    particle.setAttribute('stroke', particleColor);
-    particle.setAttribute('stroke-width', '1');
-    particle.classList.add('flow-particle');
-    particle.style.filter = `drop-shadow(0 0 6px rgba(255,255,255,0.9)) drop-shadow(0 0 12px rgba(255,255,255,0.6))`;
+    particle.setAttribute('fill', '#ffffff');
+    particle.classList.add('flow-particle', 'diagram-visible');
+    particle.style.opacity = '1';  // Override CSS that hides SVG children
     particle.style.pointerEvents = 'none';
 
-    // Set initial position
-    const initialProgress = i / count;
-    const initialPoint = path.getPointAtLength(initialProgress * pathLength);
+    // Set initial position within active range
+    const initialProgress = startProgress + (i / count) * activeRange;
+    const initialPoint = getPointAtProgress(initialProgress);
     particle.setAttribute('cx', initialPoint.x);
     particle.setAttribute('cy', initialPoint.y);
 
@@ -1598,20 +1661,18 @@ function createFlowParticles(pathId, count = 3, options = {}) {
     const elapsed = timestamp - startTime;
     const baseProgress = (elapsed % duration) / duration;
 
-    // Position each particle with even spacing
+    // Position each particle with even spacing within active range
     for (let i = 0; i < count; i++) {
       const offset = i / count;
-      let progress = (baseProgress + offset) % 1;
-      if (reverse) progress = 1 - progress;
+      let rangeProgress = (baseProgress + offset) % 1;
+      if (reverse) rangeProgress = 1 - rangeProgress;
 
-      const point = path.getPointAtLength(progress * pathLength);
+      // Map to actual path progress within the active range
+      const actualProgress = startProgress + rangeProgress * activeRange;
+
+      const point = getPointAtProgress(actualProgress);
       particles[i].setAttribute('cx', point.x);
       particles[i].setAttribute('cy', point.y);
-
-      // Ensure particle is visible
-      if (!particles[i].getAttribute('opacity')) {
-        particles[i].setAttribute('opacity', '1');
-      }
     }
 
     animationId = requestAnimationFrame(animate);
