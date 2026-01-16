@@ -36,6 +36,13 @@
     #diagram > #big-label {
       opacity: 1;
     }
+    /* RITS circle and label must ALWAYS be visible - no transitions, no hiding */
+    /* Use high specificity to override #diagram .diagram-hidden:not(.diagram-visible) */
+    #diagram #big-group, #diagram #big-label,
+    #diagram #big-group.diagram-hidden, #diagram #big-label.diagram-hidden {
+      opacity: 1 !important;
+      transition: none !important;
+    }
     /* Labels inside groups also need to be visible */
     #adis-label, #non-adis-label {
       opacity: 1 !important;
@@ -173,7 +180,7 @@
 
     <!-- Label for blue circle -->
     <text id="big-label" class="diagram-content diagram-visible" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
-          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal" style="opacity: 1;">
       <tspan x="300" dy="-40" font-size="20">RITS</tspan>
       <tspan x="300" dy="20">Settlement</tspan>
       <tspan x="300" dy="20">Engine</tspan>
