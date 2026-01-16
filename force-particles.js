@@ -71,12 +71,12 @@
     // Slow moving particles (speed 30)
     // sizeOverride: 5 makes particles larger than their line width
     const slowLines = [
-      // SWIFT HVCS - from ADIs (larger particles)
-      { id: 'hvcs-horizontal-line', reverse: true, sizeOverride: 5 },
+      // SWIFT HVCS - from ADIs (larger particles, lower frequency)
+      { id: 'hvcs-horizontal-line', reverse: true, sizeOverride: 5, spacing: 800 },
 
-      // ASX lines - flow OUT of ADIs/non-ADIs toward ASX (larger particles)
-      { id: 'asx-to-adi-line', reverse: true, sizeOverride: 5 },
-      { id: 'asx-to-hvcs-line', reverse: true, sizeOverride: 5 },  // from non-ADIs toward ASX
+      // ASX lines - flow OUT of ADIs/non-ADIs toward ASX (larger particles, lower frequency)
+      { id: 'asx-to-adi-line', reverse: true, sizeOverride: 5, spacing: 800 },
+      { id: 'asx-to-hvcs-line', reverse: true, sizeOverride: 5, spacing: 800 },  // from non-ADIs toward ASX
 
       // PEXA - from ADIs
       { id: 'pexa-to-adis-line', reverse: true },
@@ -93,18 +93,18 @@
       // { id: 'cls-s-curve', reverse: true },
       // { id: 'cls-aud-line-new', reverse: true },
 
-      // CLS AUD to RITS - flow INTO RITS (larger particles)
-      { id: 'cls-to-rits-line-final', reverse: false, sizeOverride: 5 },
+      // CLS AUD to RITS - flow INTO RITS (larger particles, lower frequency)
+      { id: 'cls-to-rits-line-final', reverse: false, sizeOverride: 5, spacing: 800 },
 
-      // ASX/DvP/Austraclear lines (larger particles)
-      { id: 'dvp-rtgs-to-austraclear-line', reverse: false, sizeOverride: 5 },     // DvP RTGS to Austraclear
-      { id: 'rtgs-to-austraclear-line', reverse: false, sizeOverride: 5 },         // RTGS to Austraclear
-      { id: 'dvp-cash-leg-to-dvp-rtgs-line', reverse: false, sizeOverride: 5 },    // DvP Cash Leg to DvP RTGS
-      { id: 'cash-transfer-to-rtgs-line', reverse: false, sizeOverride: 5 },       // Cash Transfer to RTGS
+      // ASX/DvP/Austraclear lines (medium particles for thinner lines, extra low frequency)
+      { id: 'dvp-rtgs-to-austraclear-line', reverse: false, sizeOverride: 3.5, spacing: 1500 },     // DvP RTGS to Austraclear
+      { id: 'rtgs-to-austraclear-line', reverse: false, sizeOverride: 3.5, spacing: 1500 },         // RTGS to Austraclear
+      { id: 'dvp-cash-leg-to-dvp-rtgs-line', reverse: false, sizeOverride: 3.5, spacing: 1500 },    // DvP Cash Leg to DvP RTGS
+      { id: 'cash-transfer-to-rtgs-line', reverse: false, sizeOverride: 3.5, spacing: 1500 },       // Cash Transfer to RTGS
 
-      // Austraclear to RITS (2 lines) - flow INTO RITS (larger particles)
-      { id: 'austraclear-to-rits-line-upper', reverse: false, sizeOverride: 5 },
-      { id: 'austraclear-to-rits-line-lower', reverse: false, sizeOverride: 5 },
+      // Austraclear to RITS (2 lines) - flow INTO RITS (medium particles, extra low frequency)
+      { id: 'austraclear-to-rits-line-upper', reverse: false, sizeOverride: 3.5, spacing: 1500 },
+      { id: 'austraclear-to-rits-line-lower', reverse: false, sizeOverride: 3.5, spacing: 1500 },
 
       // PEXA e-conveyancing to PEXA - flow toward PEXA (double line)
       { id: 'pexa-horizontal-line-0', reverse: false },
@@ -164,11 +164,11 @@
     });
 
     // Create chained particles for CLS path (S-curve + horizontal line)
-    // Paths are in order from CLS circle to CLS AUD box (larger particles, infrequent)
+    // Paths are in order from CLS circle to CLS AUD box (larger particles, lower frequency)
     if (typeof window.createChainedFlowParticles === 'function') {
       const clsResult = window.createChainedFlowParticles(
         ['cls-s-curve', 'cls-aud-line-new'],
-        { reverse: true, speed: 150, spacing: 400, sizeOverride: 5 }
+        { reverse: true, speed: 150, spacing: 800, sizeOverride: 5 }
       );
       console.warn('PARTICLES: Chained CLS path created', clsResult ? clsResult.length : 0, 'particles');
     }
