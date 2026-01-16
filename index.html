@@ -172,7 +172,7 @@
     </g>
 
     <!-- Label for blue circle -->
-    <text id="big-label" class="diagram-content" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
+    <text id="big-label" class="diagram-content diagram-visible" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
           fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal">
       <tspan x="300" dy="-40" font-size="20">RITS</tspan>
       <tspan x="300" dy="20">Settlement</tspan>
@@ -244,22 +244,6 @@
   <script>console.warn('ABOUT TO LOAD force-particles.js');</script>
   <script src="force-particles.js"></script>
   <script>console.warn('AFTER force-particles.js');</script>
-  <script>
-    console.log('INLINE TEST: Scripts loaded');
-    setTimeout(() => {
-      const svg = document.getElementById('diagram');
-      console.log('INLINE TEST: SVG =', svg);
-      if (svg) {
-        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        dot.setAttribute('cx', '300');
-        dot.setAttribute('cy', '450');
-        dot.setAttribute('r', '20');
-        dot.setAttribute('fill', 'lime');
-        svg.appendChild(dot);
-        console.log('INLINE TEST: Lime dot added');
-      }
-    }, 5000);
-  </script>
 
 </body>
 </html>

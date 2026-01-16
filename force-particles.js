@@ -55,6 +55,17 @@
       // Mastercard lines - from ADIs, full path to mastercard box
       { id: 'mastercard-left-line', reverse: true },
       { id: 'mastercard-left-line-horizontal', reverse: true },
+
+      // Eftpos to ESSB - flow from eftpos toward ESSB (double line)
+      { id: 'eftpos-to-essb-line-0', reverse: false },
+      { id: 'eftpos-to-essb-line-1', reverse: false },
+
+      // Mastercard to MCAU - flow from Mastercard toward MCAU (double line)
+      { id: 'mastercard-to-mcau-line-0', reverse: false },
+      { id: 'mastercard-to-mcau-line-1', reverse: false },
+
+      // Cheques/Osko to ADIs - flow from ADIs toward Cheques
+      { id: 'osko-to-adi-line', reverse: true },
     ];
 
     // Slow moving particles (speed 30)
@@ -77,41 +88,152 @@
       { id: 'swift-pds-to-rits-line-1', reverse: false },
       { id: 'swift-pds-to-rits-line-2', reverse: false },
 
-      // CLS circle to CLS AUD box (neon green line segments)
-      { id: 'cls-s-curve', reverse: true },       // from CLS circle
-      { id: 'cls-aud-line-new', reverse: true },  // to CLS AUD box
+      // CLS circle to CLS AUD box - NOW HANDLED AS CHAINED PATH BELOW
+      // { id: 'cls-s-curve', reverse: true },
+      // { id: 'cls-aud-line-new', reverse: true },
 
       // CLS AUD to RITS - flow INTO RITS
       { id: 'cls-to-rits-line-final', reverse: false },
+
+      // ASX/DvP/Austraclear lines
+      { id: 'dvp-rtgs-to-austraclear-line', reverse: false },     // DvP RTGS to Austraclear
+      { id: 'rtgs-to-austraclear-line', reverse: false },         // RTGS to Austraclear
+      { id: 'dvp-cash-leg-to-dvp-rtgs-line', reverse: false },    // DvP Cash Leg to DvP RTGS
+      { id: 'cash-transfer-to-rtgs-line', reverse: false },       // Cash Transfer to RTGS
+
+      // Austraclear to RITS (2 lines) - flow INTO RITS
+      { id: 'austraclear-to-rits-line-upper', reverse: false },
+      { id: 'austraclear-to-rits-line-lower', reverse: false },
+
+      // PEXA e-conveyancing to PEXA - flow toward PEXA (double line)
+      { id: 'pexa-horizontal-line-0', reverse: false },
+      { id: 'pexa-horizontal-line-1', reverse: false },
+
+      // Sympli e-conveyancing to ASXF - flow toward ASXF (double line)
+      { id: 'sympli-horizontal-line-0', reverse: false },
+      { id: 'sympli-horizontal-line-1', reverse: false },
+
+      // Clearing/netting to ASXB - flow toward ASXB (double line)
+      { id: 'clearing-to-asxb-line-0', reverse: false },
+      { id: 'clearing-to-asxb-line-1', reverse: false },
     ];
 
-    // Create fast particles
+    // Helper to find element by id or data-interactive-id
+    const findElement = (id) => {
+      return document.getElementById(id) ||
+             document.querySelector(`[data-interactive-id="${id}"]`);
+    };
+
+    // Create fast particles (speed 150 px/sec)
     fastLines.forEach(config => {
-      const path = document.getElementById(config.id);
+      const path = findElement(config.id);
       if (path) {
-        window.createFlowParticles(config.id, null, {
+        // Ensure element has an id for createFlowParticles
+        if (!path.id) path.id = config.id;
+        const result = window.createFlowParticles(config.id, null, {
           reverse: config.reverse,
           startProgress: config.startProgress,
-          endProgress: config.endProgress
+          endProgress: config.endProgress,
+          speed: 150
         });
+        console.warn('PARTICLES: Fast', config.id, 'created', result ? result.length : 0, 'particles');
+      } else {
+        console.warn('PARTICLES: Fast element NOT FOUND:', config.id);
       }
     });
 
     // Create slow particles
     slowLines.forEach(config => {
-      const path = document.getElementById(config.id);
+      const path = findElement(config.id);
       if (path) {
-        window.createFlowParticles(config.id, null, {
+        // Ensure element has an id for createFlowParticles
+        if (!path.id) path.id = config.id;
+        const result = window.createFlowParticles(config.id, null, {
           reverse: config.reverse,
           startProgress: config.startProgress,
           endProgress: config.endProgress,
           speed: 30,
           spacing: 120
         });
+        console.warn('PARTICLES: Slow', config.id, 'created', result ? result.length : 0, 'particles');
+      } else {
+        console.warn('PARTICLES: Slow element NOT FOUND:', config.id);
       }
     });
 
+    // Create chained particles for CLS path (S-curve + horizontal line)
+    // Paths are in order from CLS circle to CLS AUD box
+    if (typeof window.createChainedFlowParticles === 'function') {
+      const clsResult = window.createChainedFlowParticles(
+        ['cls-s-curve', 'cls-aud-line-new'],
+        { reverse: true, speed: 30, spacing: 120 }
+      );
+      console.warn('PARTICLES: Chained CLS path created', clsResult ? clsResult.length : 0, 'particles');
+    }
+
+    // Create synchronized pulse particles for settlement lines to RITS
+    // These all start together, move at fast speed, and repeat every 5 seconds
+    if (typeof window.createPulseParticles === 'function') {
+      // Direct settlement lines to RITS (sync by speed only)
+      window.createPulseParticles(
+        [
+          'mcau-to-rits-line',
+          'essb-to-rits-line',
+          'pexa-to-rits-line',
+          'asxf-to-rits-line',
+          'asxb-to-rits-line'
+        ],
+        { interval: 5000, speed: 150, reverse: false }
+      );
+
+      // LVSS lines (through LVSS circle to RITS) - sync by x-coordinate
+      // so particles move together horizontally
+      window.createPulseParticles(
+        [
+          'lvss-line-apcs',
+          'lvss-line-becs',
+          'lvss-line-cecs',
+          'lvss-line-gabs'
+        ],
+        { interval: 5000, speed: 150, reverse: false, syncByX: true }
+      );
+    }
+
     console.warn('PARTICLES: Done, total:', document.querySelectorAll('.flow-particle').length);
+
+    // Move elements to render ON TOP of particles
+    const svg = document.getElementById('diagram');
+    if (svg) {
+      // Move RTGS and DvP RTGS boxes (with their labels) on top of particles
+      ['rtgs-box', 'dvp-rtgs-box'].forEach(boxId => {
+        const elements = document.querySelectorAll(`[data-interactive-id="${boxId}"]`);
+        if (elements.length > 0) {
+          // Create a wrapper group for the box and its label
+          const wrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          wrapper.setAttribute('id', boxId + '-wrapper');
+          wrapper.classList.add('diagram-visible');
+
+          // Move all elements with this ID into the wrapper
+          elements.forEach(el => {
+            wrapper.appendChild(el);
+          });
+
+          // Add wrapper to end of SVG
+          svg.appendChild(wrapper);
+        }
+      });
+
+      // Move circles on top of boxes, with yellow lines between RITS and FSS
+      // Order: LVSS (gear + label), big-group (RITS), yellow-circles (yellow lines/dots), small-group (FSS)
+      ['lvss-gear-group', 'lvss-label', 'big-group', 'big-label', 'yellow-circles', 'small-group', 'small-label'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          svg.appendChild(el);
+        }
+      });
+
+      console.warn('PARTICLES: Moved boxes and circles on top of particles');
+    }
   }
 
   // Wait for startup animation to complete

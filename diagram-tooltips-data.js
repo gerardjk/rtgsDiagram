@@ -455,10 +455,10 @@ const tooltipContent = {
     title: 'HVCS',
     subtitle: 'High Value Clearing System',
     description:
-      'Australia\'s high-value payment clearing arrangements. Uses ISO 20022 messages delivered via SWIFT, settled in RITS.',
+      'Australia\'s high-value payment clearing arrangements. Governed by AusPayNet.',
     details: paragraphs(
       `SWIFT-delivered payments are the dominant RTGS channel by count and value. In ${FLOW_SNAPSHOT.rtgs.asAt}, SWIFT payments averaged ${fmtInt(FLOW_SNAPSHOT.rtgs.swift.paymentsAvgDaily)}/day with value of ${fmtMillionsToAud(FLOW_SNAPSHOT.rtgs.swift.valueAudMillionsAvgDaily)}/day.`,
-      'ISO 20022 adoption improved data richness and alignment with global standards, supporting automation and compliance screening.'
+      'Governed by <strong>AusPayNet</strong>. Uses ISO 20022 messages delivered via SWIFT, settled in RITS. ISO 20022 adoption improved data richness and alignment with global standards, supporting automation and compliance screening.'
     ),
     link: 'https://www.rba.gov.au/payments-and-infrastructure/rits/'
   },
@@ -541,6 +541,7 @@ const tooltipContent = {
   },
 
   'osko-box': {
+    preHeading: 'Australian Payments Plus',
     title: 'Osko',
     subtitle: 'Fast payment service',
     description:
@@ -549,6 +550,7 @@ const tooltipContent = {
   },
 
   'payid-box': {
+    preHeading: 'Australian Payments Plus',
     title: 'PayID and PayTo',
     subtitle: 'NPP overlay services',
     description:
@@ -561,6 +563,7 @@ const tooltipContent = {
   },
 
   'payto-box': {
+    preHeading: 'Australian Payments Plus',
     title: 'IPS',
     subtitle: 'International Payments Service',
     description:
@@ -583,10 +586,11 @@ const tooltipContent = {
     title: 'Direct Entry',
     subtitle: 'Batch credits and debits',
     description:
-      'Australia\'s batch payment system for payroll, bills, and direct debits. Files exchanged in bulk; net positions settled via LVSS.',
+      'Australia\'s batch payment system for payroll, bills, and direct debits. Governed by AusPayNet through BECS.',
     details: paragraphs(
       `In ${FLOW_SNAPSHOT.retail.asAt}, Direct Entry processed ${fmtInt(FLOW_SNAPSHOT.retail.directEntry.volume)} items totalling ${fmtMillionsToAud(FLOW_SNAPSHOT.retail.directEntry.valueAudMillions)}. Average ~A$${fmtInt(FLOW_SNAPSHOT.retail.directEntry.avgAudPerItem)}/item.`,
-      'Deeply embedded in enterprise payroll and billing systems. Migration to real-time alternatives requires business process change, not just technology.'
+      '<strong>Settlement timing:</strong> Direct Entry operates on batch settlement cycles rather than T+X conventions. Files submitted by cutoff times are exchanged between institutions overnight, with interbank settlement occurring the next business day via LVSS. Customer accounts are typically credited/debited on the settlement date, though some institutions provide earlier availability for credits.',
+      'Governed by <strong>AusPayNet</strong> through the BECS framework. Deeply embedded in enterprise payroll and billing systems. Migration to real-time alternatives requires business process change, not just technology.'
     )
   },
 
@@ -594,9 +598,10 @@ const tooltipContent = {
     title: 'BECS',
     subtitle: 'Bulk Electronic Clearing System',
     description:
-      'Clearing framework for Direct Entry file exchange between institutions. Rules govern validation, rejection, and correction.',
+      'Clearing framework for Direct Entry file exchange between institutions. Governed by AusPayNet.',
     prominentSystem: true,
     details: paragraphs(
+      'BECS is governed by <strong>AusPayNet</strong> (Australian Payments Network), the self-regulatory body for Australia\'s payments industry. AusPayNet sets the rules for file formats, validation, rejection handling, and participant obligations.',
       'Institutions exchange files and agree obligations via BECS; settlement occurs separately via LVSS.',
       'No fixed decommissioning date. BECS will remain while PayTo and other migration pathways mature.'
     ),
@@ -665,8 +670,8 @@ const tooltipContent = {
     title: 'APCS',
     subtitle: 'Australian Paper Clearing System',
     description:
-      'Clearing system for cheques. Images exchanged electronically but legal instrument remains paper-based.',
-    details: 'Being wound down as cheque volumes decline. Focus shifted to orderly exit with support for remaining users.'
+      'Clearing system for cheques. Governed by AusPayNet.',
+    details: 'Governed by <strong>AusPayNet</strong>. Images exchanged electronically but legal instrument remains paper-based. Being wound down as cheque volumes decline. Focus shifted to orderly exit with support for remaining users.'
   },
 
   'gabs-box': {
@@ -688,10 +693,11 @@ const tooltipContent = {
     title: 'Cheques',
     subtitle: 'Paper-based payment instrument',
     description:
-      'Declining payment method. Industry transition plan: issuance ends 30 June 2028; acceptance ends 30 September 2029.',
+      'Declining payment method. Cleared via APCS (governed by AusPayNet).',
     details: paragraphs(
       `In ${FLOW_SNAPSHOT.retail.asAt}: ~${fmtInt(FLOW_SNAPSHOT.retail.cheques.volume)} cheques totalling ${fmtMillionsToAud(FLOW_SNAPSHOT.retail.cheques.valueAudMillions)}. Average ~A$${fmtInt(FLOW_SNAPSHOT.retail.cheques.avgAudPerCheque)}—low volume but high average value.`,
-      `Volume fell ~${Math.abs(FLOW_SNAPSHOT.retail.trend.chequesVolumeChangePct).toFixed(0)}% from ${FLOW_SNAPSHOT.retail.trend.periodStart} to ${FLOW_SNAPSHOT.retail.trend.periodEnd}.`
+      '<strong>Settlement timing:</strong> Cheques clear via APCS (governed by <strong>AusPayNet</strong>) on a T+1 basis (next business day after deposit), though funds may be held longer at the receiving institution\'s discretion pending verification.',
+      `Industry transition plan: issuance ends 30 June 2028; acceptance ends 30 September 2029. Volume fell ~${Math.abs(FLOW_SNAPSHOT.retail.trend.chequesVolumeChangePct).toFixed(0)}% from ${FLOW_SNAPSHOT.retail.trend.periodStart} to ${FLOW_SNAPSHOT.retail.trend.periodEnd}.`
     ),
     link: 'https://treasury.gov.au/consultation/c2024-556474'
   },
@@ -705,20 +711,20 @@ const tooltipContent = {
     title: 'CECS',
     subtitle: 'Consumer Electronic Clearing System',
     description:
-      'Clearing stream for card obligations. Produces net positions settled via LVSS.',
-    details: 'Cards authorise instantly but settle later on a net basis. Clearing calculates obligations between issuers and acquirers.'
+      'Clearing stream for card obligations. Governed by AusPayNet.',
+    details: 'Governed by <strong>AusPayNet</strong>. Cards authorise instantly but settle later on a net basis. Clearing calculates obligations between issuers and acquirers. Net positions settled via LVSS.'
   },
 
   'direct-entry-stack-bounding-box': {
     title: 'IAC',
     subtitle: 'Issuers and Acquirers Community',
     description:
-      'Industry clearing arrangements for card issuers and acquirers. Obligations settle through interbank settlement.',
-    details: 'Reconciles transaction volumes between issuers (card providers) and acquirers (merchant payment providers). Settlement via banking layer.'
+      'Industry clearing arrangements for card issuers and acquirers. Part of AusPayNet.',
+    details: 'Part of <strong>AusPayNet</strong>. Reconciles transaction volumes between issuers (card providers) and acquirers (merchant payment providers). Settlement via banking layer.'
   },
 
   'bpay-box': {
-    preHeading: 'Australia Payments Plus',
+    preHeading: 'Australian Payments Plus',
     title: 'BPAY',
     subtitle: 'Bill payment service',
     description:
@@ -732,45 +738,49 @@ const tooltipContent = {
   },
 
   'eftpos-box': {
-    preHeading: 'Australia Payments Plus',
+    preHeading: 'Australian Payments Plus',
     title: 'eftpos',
-    subtitle: 'Domestic debit scheme',
+    subtitle: 'Domestic debit scheme (4-party)',
     description:
-      'Australia\'s domestic debit card scheme. Instant authorisation; deferred net settlement.',
+      'Australia\'s domestic debit card scheme. Operates a 4-party model with separate issuers (cardholder banks) and acquirers (merchant banks).',
     prominentSystem: true,
     details: paragraphs(
       `In ${FLOW_SNAPSHOT.retail.asAt}: ~${fmtInt(FLOW_SNAPSHOT.retail.debitCards.volume)} debit card transactions totalling ${fmtMillionsToAud(FLOW_SNAPSHOT.retail.debitCards.valueAudMillions)}. Average ~A$${fmtInt(FLOW_SNAPSHOT.retail.debitCards.avgAudPerTxn)}/txn.`,
-      'Authorisation is instant; interbank settlement is netted and deferred. Scheme calculates obligations; RBA layer settles them.'
+      'Authorisation is instant; interbank settlement is netted and typically settles next business day (T+1). Scheme calculates obligations; RBA layer settles them.'
     )
   },
 
   'mastercard-box': {
     title: 'Mastercard',
-    subtitle: 'International card scheme',
+    subtitle: 'International card scheme (4-party)',
     description:
-      'Global card network for credit and debit. Net obligations settled through scheme settlement arrangements.',
+      'Global card network for credit and debit. Operates a 4-party model with separate issuers and acquirers.',
     prominentSystem: true,
     details: paragraphs(
       `In ${FLOW_SNAPSHOT.retail.asAt}: ~${fmtInt(FLOW_SNAPSHOT.retail.creditCards.volume)} credit card transactions totalling ${fmtMillionsToAud(FLOW_SNAPSHOT.retail.creditCards.valueAudMillions)}. Average ~A$${fmtInt(FLOW_SNAPSHOT.retail.creditCards.avgAudPerTxn)}/txn.`,
-      'Authorisation is instant; settlement is netted and deferred.'
+      'Authorisation is instant; settlement is netted and typically deferred one business day (T+1) for domestic transactions.'
     )
   },
 
   'visa-box': {
     title: 'Visa',
-    subtitle: 'International card scheme',
+    subtitle: 'International card scheme (4-party)',
     description:
-      'Global card network for debit and credit. Real-time authorisation; deferred net settlement.',
+      'Global card network for debit and credit. Operates a 4-party model with separate issuers and acquirers.',
     prominentSystem: true,
-    details: 'Scheme calculates net obligations across issuers and acquirers. Settlement via banking layer.'
+    details: 'Scheme calculates net obligations across issuers and acquirers. Settlement typically occurs next business day (T+1) for domestic transactions via the banking settlement layer.'
   },
 
   'other-cards-box': {
     title: 'Other card schemes',
-    subtitle: 'Additional networks',
+    subtitle: 'Additional networks (3-party and 4-party)',
     description:
-      'Other schemes (e.g., Amex, Diners, UnionPay) with different commercial models. Still require interbank settlement.',
-    details: 'Some operate three-party models (Amex, Diners). UnionPay is China\'s national card scheme with growing international presence. All ultimately rely on banking settlement for final value movement.'
+      'Other schemes with different commercial models—some 3-party (closed loop), some 4-party (open loop).',
+    details: paragraphs(
+      '<strong>3-party (closed loop):</strong> American Express and Diners Club act as both issuer and acquirer, maintaining direct relationships with cardholders and merchants. Settlement is internal to the scheme.',
+      '<strong>4-party (open loop):</strong> UnionPay is China\'s national card scheme operating a 4-party model similar to Visa/Mastercard, with separate issuers and acquirers. Growing international presence.',
+      'All schemes ultimately rely on banking settlement for final interbank value movement.'
+    )
   },
 
   'mcau-box': {
@@ -805,8 +815,8 @@ const tooltipContent = {
     title: 'ATMs',
     subtitle: 'Cash withdrawals',
     description:
-      'Instant cash dispensing; interbank settlement deferred and netted.',
-    details: 'Customer experience is instant. Obligations between institutions settled later via net settlement arrangements.'
+      'Instant cash dispensing; interbank settlement deferred and netted. Governed by AusPayNet.',
+    details: 'Customer experience is instant. ATM interchange is governed by <strong>AusPayNet</strong>. Obligations between institutions settled later via net settlement arrangements.'
   },
 
   'claims-box': {
@@ -905,6 +915,7 @@ const tooltipContent = {
       'Global FX settlement system that eliminates settlement risk in foreign exchange transactions through payment-versus-payment (PvP) settlement.',
     details: paragraphs(
       'CLS Bank was founded in 2002 by a consortium of major global banks to address FX settlement risk following concerns about Herstatt risk (the risk that one party pays out but never receives the other currency). It is owned by over 70 of the world\'s largest financial institutions and settles over US$6 trillion in FX transactions daily.',
+      '<strong>Settlement timing:</strong> Spot FX transactions globally settle on a T+2 basis (two business days after trade date). This allows time for trade matching, confirmation, and the coordination of payment instructions across different time zones and currencies. CLS settles the actual exchange of currencies on the settlement date, eliminating principal risk through simultaneous PvP.',
       'CLS settles FX transactions in 18 major currencies including AUD. It operates on a payment-versus-payment model: both legs of an FX trade are settled simultaneously, eliminating principal risk. Each settlement day, CLS calculates multilateral net positions and participants pay in net short positions during a defined window before receiving net long positions.',
       'The RBA holds an account at CLS Bank to support AUD settlement, acting as the nostro agent for AUD. Australian banks participating in CLS settle their AUD obligations through this link to RITS.',
       'CLS is designated by the RBA as a Systemically Important Payment System (SIPS)—one of only two systems with this designation in Australia, alongside RITS itself. This reflects the critical role CLS plays in financial stability by mitigating FX settlement risk for Australian institutions.'
@@ -922,7 +933,7 @@ const tooltipContent = {
     details: paragraphs(
       `Cash equities and listed options flow through <strong>ASX Clear</strong>, the primary CCP. In ${ASX_SNAPSHOT.asAt} the lit cash market averaged ${fmtInt(ASX_SNAPSHOT.cashMarkets.avgDailyTrades)} trades per day (≈A$${ASX_SNAPSHOT.cashMarkets.avgDailyValueAudBillions.toFixed(1)} billion). The CCP held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClear.toFixed(1)} billion in initial margin and called about A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.asxClear.toFixed(1)} billion of variation margin across a typical day.` ,
       `<strong>ASX Clear (Futures)</strong> novates SPI futures, listed interest-rate contracts, and a portfolio of cleared OTC IRS. Over ${ASX_SNAPSHOT.asAt} it cleared ≈${fmtInt(ASX_SNAPSHOT.futures.avgDailyVolumeContracts)} contracts a day (≈A$${ASX_SNAPSHOT.futures.totalNotionalAudBillionsSingleSided.toFixed(0)} billion single-sided notional across the month) and held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClearFutures.toFixed(1)} billion of initial margin. Variation margin flows were roughly A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.asxClearFutures.toFixed(1)} billion per day.` ,
-      `Settlement facilities sit underneath the CCPs. <strong>ASX Settlement (CHESS)</strong> delivers DvP for equities with custody balances of ≈A$${ASX_SNAPSHOT.chess.holdingsAudBillions.toFixed(0)} billion and about ${ASX_SNAPSHOT.chess.dominantSettlementMessagesMillions.toFixed(1)} million settlement messages a month. <strong>Austraclear</strong> (also an SSF) safekeeps debt securities and structured finance paper with ≈A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(0)} billion on register and ~${fmtInt(ASX_SNAPSHOT.austraclear.tradeSourceMessagesThousands)}k trade-source messages in ${ASX_SNAPSHOT.asAt}.` ,
+      `Settlement facilities sit underneath the CCPs. <strong>ASX Settlement (CHESS)</strong> delivers DvP for equities on a T+2 basis (two business days after trade), with custody balances of ≈A$${ASX_SNAPSHOT.chess.holdingsAudBillions.toFixed(0)} billion and about ${ASX_SNAPSHOT.chess.dominantSettlementMessagesMillions.toFixed(1)} million settlement messages a month. <strong>Austraclear</strong> (also an SSF) safekeeps debt securities and structured finance paper with ≈A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(0)} billion on register and ~${fmtInt(ASX_SNAPSHOT.austraclear.tradeSourceMessagesThousands)}k trade-source messages in ${ASX_SNAPSHOT.asAt}.` ,
       'All ASX clearing and settlement cash legs pay and receive funds in RITS: CCP margin is managed intraday in central-bank money and the SSFs use delivery-versus-payment so securities and cash complete simultaneously.'
     ),
     sipsStyle: true
@@ -935,7 +946,7 @@ const tooltipContent = {
       'CCPs manage counterparty risk by becoming buyer to every seller and vice versa. Supported by margining.',
     details: paragraphs(
       `In ${ASX_SNAPSHOT.asAt}: initial margin held ~A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.total.toFixed(1)}b (ASX Clear A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClear.toFixed(1)}b, Futures A$${ASX_SNAPSHOT.clearingRisk.initialMarginHeldAudBillions.asxClearFutures.toFixed(1)}b). Variation margin ~A$${ASX_SNAPSHOT.clearingRisk.variationMarginPaidAudBillions.total.toFixed(1)}b.`,
-      '<strong>ASX Clear</strong>: cash equities and options. <strong>ASX Clear (Futures)</strong>: futures and some OTC derivatives.',
+      '<strong>ASX Clear</strong>: cash equities and options (settle T+2). <strong>ASX Clear (Futures)</strong>: futures and some OTC derivatives.',
       'Although CHESS has a trade-by-trade RTGS feeder to RITS for DvP settlement, it is essentially never used in practice. The efficiency gains from multilateral netting are so significant that all participants choose to settle on a net basis instead.'
     ),
     link: 'https://www.rba.gov.au/fin-stability/financial-market-infrastructure/'
@@ -948,7 +959,7 @@ const tooltipContent = {
       'Operates CHESS for equities settlement. Delivery versus payment (DvP) links securities and cash legs.',
     details: paragraphs(
       `In ${ASX_SNAPSHOT.asAt}: CHESS holdings ~A$${ASX_SNAPSHOT.chess.holdingsAudBillions.toFixed(1)}b, ~${ASX_SNAPSHOT.chess.dominantSettlementMessagesMillions.toFixed(1)}m settlement messages.`,
-      'CHESS coordinates securities leg; cash leg settles via RITS.'
+      'CHESS coordinates securities leg on a T+2 settlement cycle (two business days after trade); cash leg settles via RITS.'
     ),
     link: 'https://www.asx.com.au/'
   },
@@ -960,6 +971,7 @@ const tooltipContent = {
       'ASX system for equities post-trade processing: settlement workflows, electronic shareholding register, and corporate actions.',
     details: paragraphs(
       'CHESS is the core post-trade infrastructure for Australian equities. It maintains the official register of share ownership, processes transfers between buyers and sellers, handles corporate actions (dividends, rights issues, etc.), and coordinates delivery-versus-payment settlement with RITS.',
+      '<strong>Settlement timing:</strong> Australian equities currently settle on a T+2 basis (two business days after trade date). Following the United States\' move to T+1 settlement in May 2024, the Australian market is actively considering a transition to T+1. The ASX and industry participants are assessing the operational, technology, and liquidity implications of shortening the settlement cycle.',
       'ASX attempted a multi-year project to replace CHESS with a distributed ledger technology (DLT) system. The project was abandoned in November 2022 after significant delays and cost overruns, with ASX writing off A$250 million. ASX is now pursuing a conventional technology rebuild.',
       'CHESS continues to operate as critical national infrastructure while the replacement project proceeds.'
     ),
@@ -981,6 +993,7 @@ const tooltipContent = {
       'Post-trade system for debt securities and money market instruments. Connects to RITS for cash settlement.',
     details: paragraphs(
       `Austraclear is critical infrastructure for Australian financial markets. It holds ~A$${ASX_SNAPSHOT.austraclear.holdingsAudBillions.toFixed(1)} billion in securities on register (${ASX_SNAPSHOT.asAt}), including Commonwealth Government bonds, state government bonds, bank bills, and corporate debt.`,
+      '<strong>Settlement timing:</strong> Settlement cycles vary by instrument. Government bonds and semi-government securities typically settle T+2 (two business days after trade). Money market instruments (bank bills, negotiable certificates of deposit) often settle T+0 (same day) or T+1 due to short tenors. Repo transactions used for liquidity management frequently settle same-day.',
       'Austraclear settles the highest-value transactions in the Australian financial system. Government bond trades, repo transactions for RBA open market operations, and interbank money market activity all settle through Austraclear with cash legs settling via RITS.',
       `In ${FLOW_SNAPSHOT.rtgs.asAt}, Austraclear-related RTGS settlement averaged ${fmtInt(FLOW_SNAPSHOT.rtgs.austraclear.paymentsAvgDaily)} payments/day with value of ${fmtMillionsToAud(FLOW_SNAPSHOT.rtgs.austraclear.valueAudMillionsAvgDaily)}/day—by far the largest average transaction size of any settlement stream.`,
       'Austraclear is essential for monetary policy implementation: the RBA conducts open market operations by buying and selling securities that settle through Austraclear.'
@@ -1015,7 +1028,7 @@ const tooltipContent = {
     description:
       'Offsets obligations to reduce settlement payments. Efficient but concentrates risk at settlement time.',
     compactStyle: true,
-    details: 'Netting is so efficient that even though CHESS offers trade-by-trade RTGS settlement, it is essentially never used—all participants opt for net settlement instead.'
+    details: 'For equities, trades are cleared on trade date and settle on T+2 (two business days later) on a net basis. Netting is so efficient that even though CHESS offers trade-by-trade RTGS settlement, it is essentially never used—all participants opt for net settlement instead.'
   },
 
   'trade-by-trade-box': {
@@ -1024,7 +1037,7 @@ const tooltipContent = {
     description:
       'CHESS supports trade-by-trade DvP RTGS settlement via a feeder to RITS, but this option is essentially never used.',
     compactStyle: true,
-    details: 'The efficiency gains from multilateral netting are so significant that all participants choose net settlement instead.'
+    details: 'Trade-by-trade would enable same-day (T+0) settlement for individual trades, but the efficiency gains from multilateral netting on T+2 are so significant that all participants choose net settlement instead.'
   },
 
   // DvP cash leg path

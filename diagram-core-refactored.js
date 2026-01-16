@@ -281,8 +281,9 @@ function initializeDiagram() {
     if (svg && bigGroupElement && smallGroupElement) {
       // Insert blueCirclesGroup before big-group (under RITS)
       svg.insertBefore(blueCirclesGroup, bigGroupElement);
-      // Insert yellowCirclesGroup before small-group (over RITS, under FSS)
-      svg.insertBefore(yellowCirclesGroup, smallGroupElement);
+      // Insert yellowCirclesGroup AFTER big-group (over RITS, under FSS)
+      // Use insertBefore with bigGroupElement.nextSibling to place it right after RITS
+      svg.insertBefore(yellowCirclesGroup, bigGroupElement.nextSibling);
     } else {
       svg.appendChild(blueCirclesGroup);
       svg.appendChild(yellowCirclesGroup);
@@ -469,7 +470,8 @@ function initializeDiagram() {
       'blue-dots-background', 'blue-circles',
       'rba-blue-dot',
       'esas-label-top', 'esas-label-bottom',
-      'blue-connecting-lines', 'rba-blue-line'
+      'blue-connecting-lines', 'rba-blue-line',
+      'big-group', 'big-label' // RITS circle and label - always visible
     ];
 
     const stageTwoElementIds = [
@@ -524,6 +526,10 @@ function initializeDiagram() {
       visibleElements.forEach(el => {
         const elementId = el.getAttribute('id');
         if (!elementId) {
+          return;
+        }
+        // Always keep RITS circle and label visible
+        if (elementId === 'big-group' || elementId === 'big-label') {
           return;
         }
         if (!allowedIds.has(elementId)) {
@@ -7779,7 +7785,7 @@ function initializeDiagram() {
           const eftposEndX = widerAdminBoxX; // Left edge of ESSB box
           const eftposLineY = stackedEftposY + stackedHeight / 2;
 
-          eftposLineOffsets.forEach((offset) => {
+          eftposLineOffsets.forEach((offset, idx) => {
             const line = createStyledLine(
               eftposStartX,
               eftposLineY + offset,
@@ -7791,6 +7797,7 @@ function initializeDiagram() {
                 strokeLinecap: 'round'
               }
             );
+            line.setAttribute('id', `eftpos-to-essb-line-${idx}`);
             line.classList.add('eftpos-to-essb-line');
             line.setAttribute('data-interactive-id', 'eftpos-to-essb-line');
             adminLinesGroup.appendChild(line);
@@ -7812,7 +7819,7 @@ function initializeDiagram() {
           // Yellow double lines from Mastercard to MCAU
           const mastercardLineY = stackedMastercardY + stackedHeight / 2 + 2; // Shifted down 2px to center with boxes
 
-          eftposLineOffsets.forEach((offset) => {
+          eftposLineOffsets.forEach((offset, idx) => {
             const line = createStyledLine(
               eftposStartX, // Same X as eftpos
               mastercardLineY + offset,
@@ -7824,6 +7831,7 @@ function initializeDiagram() {
                 strokeLinecap: 'round'
               }
             );
+            line.setAttribute('id', `mastercard-to-mcau-line-${idx}`);
             line.classList.add('mastercard-to-mcau-line');
             line.setAttribute('data-interactive-id', 'mastercard-to-mcau-line');
             adminLinesGroup.appendChild(line);
@@ -8560,6 +8568,12 @@ function initializeDiagram() {
         yellowCirclesGroup.appendChild(yellowCirclesByDot[dotIndex]);
       }
     });
+
+    // Ensure yellow lines render OVER the RITS circle (big-group)
+    const bigGroupForYellow = document.getElementById('big-group');
+    if (bigGroupForYellow && yellowCirclesGroup.parentNode) {
+      svg.insertBefore(yellowCirclesGroup, bigGroupForYellow.nextSibling);
+    }
 
   if ((!window.clsPositions || !window.clsEndpoints || !window.clsEndpoints.dotLineEndX) && window.dotPositions && window.dotPositions[99]) {
     const clsDot = window.dotPositions[99];
@@ -12002,7 +12016,31 @@ if (window.makeInteractive) {
     if (clsGreenCircle && bigGroupRef) {
       svg.insertBefore(clsGreenCircle, bigGroupRef);
     }
+
+    // Move yellow circles group AFTER big-group so yellow lines render OVER RITS circle
+    const yellowCirclesGroupFinal = document.getElementById('yellow-circles');
+    const smallGroupRef = document.getElementById('small-group');
+    if (yellowCirclesGroupFinal && smallGroupRef) {
+      // Insert yellow circles right before small-group (FSS), which is after big-group (RITS)
+      svg.insertBefore(yellowCirclesGroupFinal, smallGroupRef);
+    } else if (yellowCirclesGroupFinal && bigGroupRef) {
+      // Fallback: remove and re-add after big-group
+      yellowCirclesGroupFinal.remove();
+      bigGroupRef.after(yellowCirclesGroupFinal);
+    }
   }, 100);
+
+  // Second pass to ensure yellow lines are over RITS
+  // Move big-group (RITS) BEFORE yellow-circles so yellow lines render on top
+  setTimeout(() => {
+    const svg = document.getElementById('diagram');
+    const yellowGroup = document.getElementById('yellow-circles');
+    const bigGroup = document.getElementById('big-group');
+    if (svg && yellowGroup && bigGroup) {
+      // Insert big-group right before yellow-circles, so yellow renders on top
+      svg.insertBefore(bigGroup, yellowGroup);
+    }
+  }, 200);
 
   // Restore console.log before function ends
   restoreConsole();

@@ -478,8 +478,8 @@ function showTooltip(elementId, event, originalElementId) {
   // Italic for RITS/CLS (SIPS), NOT italic for Prominent Systems
   // "Australian Payments Plus" is always bold, and white for Prominent Systems
   if (content.preHeading) {
-    const isAustralianPaymentsPlus = content.preHeading === 'Australia Payments Plus';
-    const preHeadingColor = (isProminentSystem && isAustralianPaymentsPlus) ? 'white' : (accentColor || subtitleColor);
+    const isAustralianPaymentsPlus = content.preHeading === 'Australian Payments Plus';
+    const preHeadingColor = isAustralianPaymentsPlus ? 'white' : (accentColor || subtitleColor);
     const preHeadingWeight = isAustralianPaymentsPlus ? 'font-weight: bold;' : 'font-weight: normal;';
     const preHeadingStyle = (isRitsCircle || isClsCircle) ? 'font-style: italic;' : '';
     html += `<div style="${preHeadingWeight} ${preHeadingStyle} font-size: 11px; color: ${preHeadingColor}; margin-bottom: 10px;">${content.preHeading}</div>`;
@@ -1569,6 +1569,53 @@ const PARTICLE_SPEED_DEFAULT = 80;    // pixels per second (default - faster)
 const PARTICLE_SPACING_DEFAULT = 80;  // pixels between particles
 
 /**
+ * Lighten a color by mixing it with white
+ * @param {string} color - Hex color (e.g., '#ff0000') or RGB (e.g., 'rgb(255,0,0)')
+ * @param {number} amount - How much to lighten (0-1, where 1 = white)
+ * @returns {string} Lightened hex color
+ */
+function lightenColor(color, amount = 0.5) {
+  let r, g, b;
+
+  // Handle RGB format: rgb(r, g, b) or rgba(r, g, b, a)
+  const rgbMatch = color.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (rgbMatch) {
+    r = parseInt(rgbMatch[1], 10);
+    g = parseInt(rgbMatch[2], 10);
+    b = parseInt(rgbMatch[3], 10);
+  } else {
+    // Handle hex colors
+    let hex = color;
+    if (hex.startsWith('#')) {
+      hex = hex.slice(1);
+    }
+
+    // Handle 3-char hex
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+
+    // If still not valid hex, return white
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) {
+      return '#ffffff';
+    }
+
+    // Parse RGB from hex
+    r = parseInt(hex.substring(0, 2), 16);
+    g = parseInt(hex.substring(2, 4), 16);
+    b = parseInt(hex.substring(4, 6), 16);
+  }
+
+  // Mix with white
+  const newR = Math.round(r + (255 - r) * amount);
+  const newG = Math.round(g + (255 - g) * amount);
+  const newB = Math.round(b + (255 - b) * amount);
+
+  // Convert back to hex
+  return '#' + [newR, newG, newB].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Create flowing particles on a path or line with consistent speed and spacing
  * @param {string} pathId - The ID of the path or line element
  * @param {Object} options - Configuration options
@@ -1607,6 +1654,11 @@ function createFlowParticles(pathId, countIgnored, options = {}) {
                       parseFloat(window.getComputedStyle(element).strokeWidth) || 6;
   const size = options.sizeOverride || (strokeWidth / 2);  // Radius = half of stroke width
 
+  // Get stroke color and create lightened version for particles
+  const strokeColor = element.getAttribute('stroke') ||
+                      window.getComputedStyle(element).stroke || '#ffffff';
+  const particleColor = lightenColor(strokeColor, 0.6);  // 60% toward white
+
   const reverse = options.reverse || false;
   const speed = options.speed || PARTICLE_SPEED_DEFAULT;
   const spacing = options.spacing || PARTICLE_SPACING_DEFAULT;
@@ -1632,12 +1684,23 @@ function createFlowParticles(pathId, countIgnored, options = {}) {
     }
   };
 
+  // Get or create a group for particles - append to end of SVG
+  // force-particles.js will move circles on top afterward
+  let particleGroup = document.getElementById('particle-group');
+  if (!particleGroup) {
+    particleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    particleGroup.setAttribute('id', 'particle-group');
+    particleGroup.classList.add('diagram-visible');
+    particleGroup.style.opacity = '1';
+    svg.appendChild(particleGroup);
+  }
+
   // Create all particles
   const particles = [];
   for (let i = 0; i < count; i++) {
     const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     particle.setAttribute('r', size);
-    particle.setAttribute('fill', '#ffffff');
+    particle.setAttribute('fill', particleColor);
     particle.classList.add('flow-particle', 'diagram-visible');
     particle.style.opacity = '1';  // Override CSS that hides SVG children
     particle.style.pointerEvents = 'none';
@@ -1648,7 +1711,7 @@ function createFlowParticles(pathId, countIgnored, options = {}) {
     particle.setAttribute('cx', initialPoint.x);
     particle.setAttribute('cy', initialPoint.y);
 
-    svg.appendChild(particle);
+    particleGroup.appendChild(particle);
     particles.push(particle);
   }
 
@@ -1695,6 +1758,353 @@ function createFlowParticle(pathId, options = {}) {
 }
 
 /**
+ * Create particles that flow across multiple chained paths
+ * @param {string[]} pathIds - Array of path IDs in order of flow
+ * @param {Object} options - Same options as createFlowParticles
+ */
+function createChainedFlowParticles(pathIds, options = {}) {
+  const svg = document.getElementById('diagram');
+  if (!svg) return [];
+
+  // Collect all path elements and their lengths
+  const paths = [];
+  let totalLength = 0;
+
+  for (const pathId of pathIds) {
+    const element = document.getElementById(pathId) ||
+                    document.querySelector(`[data-interactive-id="${pathId}"]`);
+    if (!element) {
+      console.warn('PARTICLES: Chained path not found:', pathId);
+      continue;
+    }
+
+    const tagName = element.tagName.toLowerCase();
+    const isPath = tagName === 'path' && typeof element.getTotalLength === 'function';
+    const isLine = tagName === 'line';
+
+    if (!isPath && !isLine) continue;
+
+    const length = isPath ? element.getTotalLength() : getLineLength(element);
+    paths.push({ element, length, isPath, startOffset: totalLength });
+    totalLength += length;
+  }
+
+  if (paths.length === 0 || totalLength < 10) return [];
+
+  const reverse = options.reverse || false;
+  const speed = options.speed || PARTICLE_SPEED_DEFAULT;
+  const spacing = options.spacing || PARTICLE_SPACING_DEFAULT;
+
+  // Get stroke width and color from first path
+  const strokeWidth = parseFloat(paths[0].element.getAttribute('stroke-width')) || 6;
+  const size = options.sizeOverride || (strokeWidth / 2);
+
+  // Get stroke color and create lightened version for particles
+  const strokeColor = paths[0].element.getAttribute('stroke') ||
+                      window.getComputedStyle(paths[0].element).stroke || '#ffffff';
+  const particleColor = lightenColor(strokeColor, 0.6);  // 60% toward white
+
+  const count = Math.max(1, Math.floor(totalLength / spacing));
+  const duration = (totalLength / speed) * 1000;
+
+  // Helper to get point at progress across all chained paths
+  const getPointAtProgress = (progress) => {
+    const targetLength = progress * totalLength;
+
+    for (const path of paths) {
+      if (targetLength <= path.startOffset + path.length) {
+        const localProgress = (targetLength - path.startOffset) / path.length;
+        if (path.isPath) {
+          return path.element.getPointAtLength(localProgress * path.length);
+        } else {
+          return getLinePointAtProgress(path.element, localProgress);
+        }
+      }
+    }
+
+    // Fallback to end of last path
+    const lastPath = paths[paths.length - 1];
+    if (lastPath.isPath) {
+      return lastPath.element.getPointAtLength(lastPath.length);
+    } else {
+      return getLinePointAtProgress(lastPath.element, 1);
+    }
+  };
+
+  // Get or create particle group
+  let particleGroup = document.getElementById('particle-group');
+  if (!particleGroup) {
+    particleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    particleGroup.setAttribute('id', 'particle-group');
+    particleGroup.classList.add('diagram-visible');
+    particleGroup.style.opacity = '1';
+    svg.appendChild(particleGroup);
+  }
+
+  // Create particles
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    particle.setAttribute('r', size);
+    particle.setAttribute('fill', particleColor);
+    particle.classList.add('flow-particle', 'diagram-visible');
+    particle.style.opacity = '1';
+    particle.style.pointerEvents = 'none';
+
+    const initialProgress = i / count;
+    const initialPoint = getPointAtProgress(initialProgress);
+    particle.setAttribute('cx', initialPoint.x);
+    particle.setAttribute('cy', initialPoint.y);
+
+    particleGroup.appendChild(particle);
+    particles.push(particle);
+  }
+
+  // Animation loop
+  let animationId;
+  let startTime = null;
+
+  const animate = (timestamp) => {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+    const baseProgress = (elapsed % duration) / duration;
+
+    for (let i = 0; i < count; i++) {
+      const offset = i / count;
+      let progress = (baseProgress + offset) % 1;
+      if (reverse) progress = 1 - progress;
+
+      const point = getPointAtProgress(progress);
+      particles[i].setAttribute('cx', point.x);
+      particles[i].setAttribute('cy', point.y);
+    }
+
+    animationId = requestAnimationFrame(animate);
+  };
+
+  animationId = requestAnimationFrame(animate);
+
+  // Store for cleanup
+  const chainKey = pathIds.join('+');
+  activeFlowAnimations.set(chainKey, { particles, animationId });
+
+  return particles;
+}
+
+// Expose chained function globally
+window.createChainedFlowParticles = createChainedFlowParticles;
+
+/**
+ * Create synchronized pulse particles across multiple lines
+ * All particles start together, move together, then repeat after interval
+ * @param {string[]} lineIds - Array of line data-interactive-ids
+ * @param {Object} options - Configuration options
+ * @param {number} options.interval - Time between pulses in ms (default: 15000)
+ * @param {number} options.speed - Speed in pixels per second (default: 150 for fast)
+ * @param {boolean} options.reverse - Flow direction (default: false)
+ * @param {boolean} options.syncByX - Sync particles by x-coordinate instead of progress (default: false)
+ */
+function createPulseParticles(lineIds, options = {}) {
+  const svg = document.getElementById('diagram');
+  if (!svg) return;
+
+  const interval = options.interval || 15000;
+  const speed = options.speed || 150;  // Fast speed by default
+  const reverse = options.reverse || false;
+  const syncByX = options.syncByX || false;
+
+  // Collect all line elements (each lineId may have multiple lines - double lines)
+  // Exclude hit areas (transparent stroke) and only get visible lines
+  const allLines = [];
+  for (const lineId of lineIds) {
+    const elements = document.querySelectorAll(`[data-interactive-id="${lineId}"]`);
+    elements.forEach(el => {
+      const tagName = el.tagName.toLowerCase();
+      if (tagName === 'line' || (tagName === 'path' && typeof el.getTotalLength === 'function')) {
+        // Skip hit areas (transparent stroke)
+        const stroke = el.getAttribute('stroke');
+        if (stroke && stroke !== 'transparent' && stroke !== 'none') {
+          allLines.push({ element: el, lineId });
+        }
+      }
+    });
+  }
+
+  if (allLines.length === 0) {
+    console.warn('PARTICLES: No pulse lines found for', lineIds);
+    return;
+  }
+
+  // Get or create particle group
+  let particleGroup = document.getElementById('particle-group');
+  if (!particleGroup) {
+    particleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    particleGroup.setAttribute('id', 'particle-group');
+    particleGroup.classList.add('diagram-visible');
+    particleGroup.style.opacity = '1';
+    svg.appendChild(particleGroup);
+  }
+
+  // Find the longest line to determine animation duration
+  let maxLength = 0;
+  let minX = Infinity, maxX = -Infinity;
+
+  // Create particles for each line (hidden initially)
+  const particleData = allLines.map(({ element, lineId }) => {
+    const tagName = element.tagName.toLowerCase();
+    const isPath = tagName === 'path';
+    const length = isPath ? element.getTotalLength() : getLineLength(element);
+    maxLength = Math.max(maxLength, length);
+
+    // Match size calculation from createFlowParticles
+    // These admin double-lines typically have stroke-width 2.25
+    let strokeWidth = parseFloat(element.getAttribute('stroke-width'));
+    if (!strokeWidth || strokeWidth > 10) {
+      // Fallback for admin lines - they use 2.25 stroke width
+      strokeWidth = 2.25;
+    }
+    const size = strokeWidth / 2;  // Radius = half of stroke width
+
+    const strokeColor = element.getAttribute('stroke') ||
+                        window.getComputedStyle(element).stroke || '#ffffff';
+    const particleColor = lightenColor(strokeColor, 0.6);
+
+    const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    particle.setAttribute('r', size);
+    particle.setAttribute('fill', particleColor);
+    particle.classList.add('flow-particle', 'pulse-particle', 'diagram-visible');
+    particle.style.opacity = '0';  // Hidden initially
+    particle.style.pointerEvents = 'none';
+
+    particleGroup.appendChild(particle);
+
+    const getPoint = (progress) => {
+      if (isPath) {
+        return element.getPointAtLength(progress * length);
+      } else {
+        return getLinePointAtProgress(element, progress);
+      }
+    };
+
+    // For syncByX: sample the path to build x-to-point mapping
+    let xToPoint = null;
+    if (syncByX) {
+      xToPoint = [];
+      const samples = 100;
+      for (let i = 0; i <= samples; i++) {
+        const point = getPoint(i / samples);
+        xToPoint.push({ x: point.x, y: point.y, progress: i / samples });
+        minX = Math.min(minX, point.x);
+        maxX = Math.max(maxX, point.x);
+      }
+    }
+
+    return { particle, getPoint, length, xToPoint };
+  });
+
+  // Calculate duration based on speed and longest line (or x-range for syncByX)
+  const xRange = maxX - minX;
+  const duration = syncByX ? (xRange / speed) * 1000 : (maxLength / speed) * 1000;
+
+  // Helper to find y for a given x using sampled points
+  const getPointAtX = (xToPoint, targetX) => {
+    // Find the two samples that bracket targetX
+    for (let i = 0; i < xToPoint.length - 1; i++) {
+      const p1 = xToPoint[i];
+      const p2 = xToPoint[i + 1];
+      if ((p1.x <= targetX && p2.x >= targetX) || (p1.x >= targetX && p2.x <= targetX)) {
+        // Interpolate
+        const t = (targetX - p1.x) / (p2.x - p1.x);
+        return { x: targetX, y: p1.y + t * (p2.y - p1.y) };
+      }
+    }
+    // Fallback to closest point
+    return xToPoint[0].x < xToPoint[xToPoint.length - 1].x
+      ? (targetX < xToPoint[0].x ? xToPoint[0] : xToPoint[xToPoint.length - 1])
+      : (targetX > xToPoint[0].x ? xToPoint[0] : xToPoint[xToPoint.length - 1]);
+  };
+
+  // Animation function for a single pulse
+  const runPulse = () => {
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (!startTime) {
+        startTime = timestamp;
+        // Show all particles at start
+        particleData.forEach(({ particle }) => {
+          particle.style.opacity = '1';
+        });
+      }
+
+      const elapsed = timestamp - startTime;
+      const overallProgress = Math.min(elapsed / duration, 1);
+
+      if (syncByX) {
+        // All particles move to same x-coordinate
+        const currentX = reverse
+          ? maxX - overallProgress * xRange
+          : minX + overallProgress * xRange;
+
+        particleData.forEach(({ particle, xToPoint }) => {
+          const point = getPointAtX(xToPoint, currentX);
+          particle.setAttribute('cx', point.x);
+          particle.setAttribute('cy', point.y);
+        });
+
+        // Hide all particles when done
+        if (overallProgress >= 1) {
+          particleData.forEach(({ particle }) => {
+            particle.style.opacity = '0';
+          });
+        }
+      } else {
+        // Each particle moves at same speed, so shorter lines finish first
+        particleData.forEach(({ particle, getPoint, length }) => {
+          const lineDuration = (length / speed) * 1000;
+          let progress = Math.min(elapsed / lineDuration, 1);
+          if (reverse) progress = 1 - progress;
+
+          const point = getPoint(reverse ? 1 - progress : progress);
+          particle.setAttribute('cx', point.x);
+          particle.setAttribute('cy', point.y);
+
+          // Hide particle when it reaches the end
+          if (elapsed >= lineDuration) {
+            particle.style.opacity = '0';
+          }
+        });
+      }
+
+      if (elapsed < duration) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  };
+
+  // Run first pulse immediately
+  runPulse();
+
+  // Set up interval for subsequent pulses
+  const intervalId = setInterval(runPulse, interval);
+
+  // Store for cleanup
+  const pulseKey = 'pulse-' + lineIds.join('+');
+  activeFlowAnimations.set(pulseKey, {
+    particles: particleData.map(d => d.particle),
+    animationId: intervalId,
+    isPulse: true
+  });
+
+  console.warn('PARTICLES: Created pulse animation for', lineIds.length, 'line groups,', particleData.length, 'total lines');
+}
+
+// Expose pulse function globally
+window.createPulseParticles = createPulseParticles;
+
+/**
  * Remove all flow particles from the diagram
  */
 function clearFlowParticles() {
@@ -1703,8 +2113,12 @@ function clearFlowParticles() {
   document.querySelectorAll('[id$="-flow-gradient"]').forEach(el => el.remove());
   document.querySelectorAll('[id$="-light-mask"]').forEach(el => el.remove());
 
-  activeFlowAnimations.forEach(({ particles, animationId }) => {
-    cancelAnimationFrame(animationId);
+  activeFlowAnimations.forEach(({ particles, animationId, isPulse }) => {
+    if (isPulse) {
+      clearInterval(animationId);
+    } else {
+      cancelAnimationFrame(animationId);
+    }
     particles.forEach(p => p.remove());
   });
   activeFlowAnimations.clear();
