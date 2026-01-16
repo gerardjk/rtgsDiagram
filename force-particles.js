@@ -24,9 +24,9 @@
 
     // Fast moving particles (default speed 80)
     const fastLines = [
-      // NPP lines - flow OUT of ADIs
-      { id: 'npp-to-adi-line', reverse: true },
-      { id: 'npp-to-fss-path', reverse: false },  // INTO FSS
+      // NPP lines - flow OUT of ADIs (higher frequency)
+      { id: 'npp-to-adi-line', reverse: true, spacing: 53 },
+      { id: 'npp-to-fss-path', reverse: false, spacing: 53 },  // INTO FSS
 
       // Direct Entry - main line from ADIs (full path)
       { id: 'directentry-to-adi-line', reverse: true },
@@ -135,7 +135,8 @@
           reverse: config.reverse,
           startProgress: config.startProgress,
           endProgress: config.endProgress,
-          speed: 150
+          speed: 150,
+          spacing: config.spacing || 80
         });
         console.warn('PARTICLES: Fast', config.id, 'created', result ? result.length : 0, 'particles');
       } else {
