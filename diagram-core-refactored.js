@@ -38,8 +38,12 @@ function initializeDiagram() {
     const styleEl = document.createElement('style');
     styleEl.id = 'diagram-visibility-styles';
     styleEl.textContent = `
-      #diagram .diagram-hidden:not(.diagram-visible) { opacity: 0 !important; }
+      #diagram .diagram-hidden:not(.diagram-visible):not(#big-group):not(#big-label) { opacity: 0 !important; }
       #diagram .diagram-visible { opacity: 1 !important; }
+      /* RITS circle and label must ALWAYS stay visible regardless of class changes */
+      #diagram #big-group, #diagram #big-label,
+      #diagram #big-group.diagram-hidden, #diagram #big-label.diagram-hidden,
+      #big-group, #big-label { opacity: 1 !important; }
       #diagram .stage-three-label { transition: opacity 0.5s ease-in-out; }
       #diagram .stage-four-label { transition: opacity 0.5s ease-in-out; }
       #diagram .stage-five-element { transition: opacity 0.5s ease-in-out; }
@@ -224,6 +228,11 @@ function initializeDiagram() {
       }
     };
     const bigGroupElement = document.getElementById('big-group');
+    // Force RITS circle to always be visible (inline style has highest priority)
+    if (bigGroupElement) {
+      bigGroupElement.style.opacity = '1';
+      bigGroupElement.style.setProperty('opacity', '1', 'important');
+    }
     // Make RITS circle interactive
     if (bigGroupElement && typeof makeInteractive === 'function') {
       makeInteractive(bigGroupElement, 'rits-circle');
@@ -250,6 +259,11 @@ function initializeDiagram() {
 
     if (orangeLinesGroup) {
       const bigLabelNode = document.getElementById('big-label');
+      // Force RITS label to always be visible (inline style has highest priority)
+      if (bigLabelNode) {
+        bigLabelNode.style.opacity = '1';
+        bigLabelNode.style.setProperty('opacity', '1', 'important');
+      }
       // Make RITS label interactive
       if (bigLabelNode && typeof makeInteractive === 'function') {
         makeInteractive(bigLabelNode, 'rits-circle');
@@ -522,14 +536,11 @@ function initializeDiagram() {
         return;
       }
       const allowedIds = getAllowedStageIds(maxStage);
-      const visibleElements = svg.querySelectorAll('.diagram-visible');
+      // Exclude big-group and big-label from the query - they must ALWAYS stay visible
+      const visibleElements = svg.querySelectorAll('.diagram-visible:not(#big-group):not(#big-label)');
       visibleElements.forEach(el => {
         const elementId = el.getAttribute('id');
         if (!elementId) {
-          return;
-        }
-        // Always keep RITS circle and label visible
-        if (elementId === 'big-group' || elementId === 'big-label') {
           return;
         }
         if (!allowedIds.has(elementId)) {
