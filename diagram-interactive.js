@@ -23,7 +23,9 @@ function createTooltipElement() {
   // Detect Firefox and DPI scaling
   const isFirefox = /firefox/i.test(navigator.userAgent);
   const dpr = window.devicePixelRatio || 1;
-  const scaleFactor = isFirefox ? (2 / dpr) : 1; // Firefox dpr=10, Chrome dpr=2
+  const isMobile = window.innerWidth <= 768;
+  // On mobile, don't apply additional scaling since mobile browsers handle this well
+  const scaleFactor = isMobile ? 1 : (isFirefox ? (2 / dpr) : 1); // Firefox dpr=10, Chrome dpr=2
 
   // Create wrapper div for scaling (Firefox only)
   let tooltip;
@@ -65,7 +67,7 @@ function createTooltipElement() {
     wrapper.addEventListener('mouseleave', handleTooltipMouseLeave);
   } else {
     // Chrome: apply same scaling as Firefox for consistent size
-    const chromeScaleFactor = 2 / dpr; // Match Firefox scaling
+    const chromeScaleFactor = isMobile ? 1 : (2 / dpr); // No scaling on mobile
 
     tooltip = document.createElement('div');
     tooltip.id = 'diagram-tooltip';
@@ -398,32 +400,40 @@ function showTooltip(elementId, event, originalElementId) {
   const isSmallStyle = isDot || isLine || content.smallStyle;  // Use small style for dots, their lines, or elements with smallStyle flag
   const isCompactStyle = content.compactStyle;  // Compact style for batch boxes (MCAU, ESSB, PEXA, ASXF, ASXB)
 
+  // Check if we're on mobile (viewport width <= 768px)
+  const isMobile = window.innerWidth <= 768;
+  const maxMobileWidth = Math.min(window.innerWidth - 40, 320); // Leave 20px padding on each side
+
   if (isCompactStyle) {
     // Compact tooltips for batch boxes - between small (240px) and normal (320px)
-    tooltipContentElement.style.width = '280px';
+    const width = isMobile ? `${Math.min(280, maxMobileWidth)}px` : '280px';
+    tooltipContentElement.style.width = width;
     tooltipContentElement.style.minWidth = '';
-    tooltipContentElement.style.maxWidth = '280px';
+    tooltipContentElement.style.maxWidth = width;
     tooltipContentElement.style.padding = '10px 12px';
     tooltipContentElement.style.borderWidth = '2px';
   } else if (isSmallStyle) {
     // Smaller tooltips for ESA dots and elements with smallStyle
-    tooltipContentElement.style.width = '240px';
+    const width = isMobile ? `${Math.min(240, maxMobileWidth)}px` : '240px';
+    tooltipContentElement.style.width = width;
     tooltipContentElement.style.minWidth = '';
-    tooltipContentElement.style.maxWidth = '240px';
+    tooltipContentElement.style.maxWidth = width;
     tooltipContentElement.style.padding = '8px 10px';
     tooltipContentElement.style.borderWidth = '1px';
   } else if (isLineStyle) {
-    // LineStyle tooltips: fixed width for consistency
-    tooltipContentElement.style.width = '400px';
+    // LineStyle tooltips: responsive width on mobile
+    const width = isMobile ? `${maxMobileWidth}px` : '400px';
+    tooltipContentElement.style.width = width;
     tooltipContentElement.style.minWidth = '';
-    tooltipContentElement.style.maxWidth = '400px';
+    tooltipContentElement.style.maxWidth = width;
     tooltipContentElement.style.padding = '12px 14px';
     tooltipContentElement.style.borderWidth = '2px';
   } else {
-    // Normal tooltips: fixed width for consistency
-    tooltipContentElement.style.width = '400px';
+    // Normal tooltips: responsive width on mobile
+    const width = isMobile ? `${maxMobileWidth}px` : '400px';
+    tooltipContentElement.style.width = width;
     tooltipContentElement.style.minWidth = '';
-    tooltipContentElement.style.maxWidth = '400px';
+    tooltipContentElement.style.maxWidth = width;
     tooltipContentElement.style.padding = '12px 14px';
     tooltipContentElement.style.borderWidth = '2px';
   }
@@ -438,8 +448,9 @@ function showTooltip(elementId, event, originalElementId) {
     tooltipContentElement.style.borderColor = accentColor || 'rgba(255, 255, 255, 0.9)';
     tooltipContentElement.style.borderWidth = '3px';
     // Wider tooltip for RITS/CLS to avoid word wrap on long subtitles
-    tooltipContentElement.style.width = '480px';
-    tooltipContentElement.style.maxWidth = '480px';
+    const ritsClsWidth = isMobile ? `${maxMobileWidth}px` : '480px';
+    tooltipContentElement.style.width = ritsClsWidth;
+    tooltipContentElement.style.maxWidth = ritsClsWidth;
   } else if (hasSipsStyle) {
     tooltipContentElement.style.borderColor = accentColor || 'rgba(255, 255, 255, 0.9)';
     tooltipContentElement.style.borderWidth = '3px';
@@ -549,7 +560,8 @@ function showTooltip(elementId, event, originalElementId) {
   };
 
   // Position tooltip near mouse
-  const padding = 15;
+  const isMobileView = window.innerWidth <= 768;
+  const padding = isMobileView ? 10 : 15; // Less padding on mobile
   let x = event.clientX + padding;
   let y = event.clientY + padding;
 
@@ -560,6 +572,13 @@ function showTooltip(elementId, event, originalElementId) {
   }
   if (y + rect.height > window.innerHeight) {
     y = event.clientY - rect.height - padding;
+  }
+
+  // On mobile, ensure minimum distance from edges
+  if (isMobileView) {
+    const minEdgeDistance = 10;
+    x = Math.max(minEdgeDistance, Math.min(x, window.innerWidth - rect.width - minEdgeDistance));
+    y = Math.max(minEdgeDistance, Math.min(y, window.innerHeight - rect.height - minEdgeDistance));
   }
 
   tooltipWrapper.style.left = x + 'px';
@@ -1151,7 +1170,8 @@ function handleMouseMove(event) {
   const tooltip = document.getElementById('diagram-tooltip');
   if (!tooltip || tooltip.style.opacity === '0') return;
 
-  const padding = 15;
+  const isMobileView = window.innerWidth <= 768;
+  const padding = isMobileView ? 10 : 15;
   let x = event.clientX + padding;
   let y = event.clientY + padding;
 
@@ -1161,6 +1181,13 @@ function handleMouseMove(event) {
   }
   if (y + rect.height > window.innerHeight) {
     y = event.clientY - rect.height - padding;
+  }
+
+  // On mobile, ensure minimum distance from edges
+  if (isMobileView) {
+    const minEdgeDistance = 10;
+    x = Math.max(minEdgeDistance, Math.min(x, window.innerWidth - rect.width - minEdgeDistance));
+    y = Math.max(minEdgeDistance, Math.min(y, window.innerHeight - rect.height - minEdgeDistance));
   }
 
   tooltip.style.left = x + 'px';
@@ -1669,11 +1696,19 @@ function createFlowParticles(pathId, countIgnored, options = {}) {
   const activeRange = endProgress - startProgress;
   const activeLength = elementLength * activeRange;
 
-  // Calculate particle count based on spacing (only for active range)
-  const count = Math.max(1, Math.floor(activeLength / spacing));
-
   // Calculate duration based on speed for the ACTIVE portion
   const duration = (activeLength / speed) * 1000;  // Convert to ms
+
+  // For time-based frequency: spacing = milliseconds between particles
+  const timeInterval = spacing * 10;  // Convert spacing to time interval (ms)
+
+  // Need enough particles to maintain frequency
+  const count = Math.max(1, Math.ceil(duration / timeInterval) + 1);
+
+  // Log for debugging time-based frequency
+  if (pathId.includes('cash-transfer') || pathId.includes('dvp') || pathId.includes('austraclear') || pathId.includes('hvcs')) {
+    console.warn(`PARTICLES: ${pathId} - duration: ${duration}ms, interval: ${timeInterval}ms, count: ${count}`);
+  }
 
   // Helper to get point at progress
   const getPointAtProgress = (progress) => {
@@ -1695,52 +1730,71 @@ function createFlowParticles(pathId, countIgnored, options = {}) {
     svg.appendChild(particleGroup);
   }
 
-  // Create all particles
+  // Create particles periodically - no looping, just spawn at start and travel once
   const particles = [];
-  for (let i = 0; i < count; i++) {
+  let animationId;
+  let lastSpawnTime = 0;
+
+  // Function to create a single particle
+  const createParticle = () => {
     const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     particle.setAttribute('r', size);
     particle.setAttribute('fill', particleColor);
     particle.classList.add('flow-particle', 'diagram-visible');
-    particle.style.opacity = '1';  // Override CSS that hides SVG children
+    particle.style.opacity = '1';
     particle.style.pointerEvents = 'none';
 
-    // Set initial position within active range
-    const initialProgress = startProgress + (i / count) * activeRange;
+    // Start at beginning or end depending on reverse
+    const initialProgress = reverse ? endProgress : startProgress;
     const initialPoint = getPointAtProgress(initialProgress);
     particle.setAttribute('cx', initialPoint.x);
     particle.setAttribute('cy', initialPoint.y);
 
+    // Store creation time for this particle
+    particle._createdAt = performance.now();
+
     particleGroup.appendChild(particle);
     particles.push(particle);
-  }
+    return particle;
+  };
 
-  // Single animation loop for all particles
-  let animationId;
-  let startTime = null;
-
+  // Animation loop that spawns new particles and moves existing ones
   const animate = (timestamp) => {
-    if (!startTime) startTime = timestamp;
-    const elapsed = timestamp - startTime;
-    const baseProgress = (elapsed % duration) / duration;
+    // Spawn new particle at regular intervals
+    if (timestamp - lastSpawnTime >= timeInterval) {
+      createParticle();
+      lastSpawnTime = timestamp;
+    }
 
-    // Position each particle with even spacing within active range
-    for (let i = 0; i < count; i++) {
-      const offset = i / count;
-      let rangeProgress = (baseProgress + offset) % 1;
-      if (reverse) rangeProgress = 1 - rangeProgress;
+    // Update all particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const particle = particles[i];
+      const age = timestamp - particle._createdAt;
 
-      // Map to actual path progress within the active range
+      // Calculate progress based on age
+      let progress = age / duration;
+
+      // Remove particle when it reaches the end
+      if (progress >= 1) {
+        particle.remove();
+        particles.splice(i, 1);
+        continue;
+      }
+
+      // Calculate actual position
+      let rangeProgress = reverse ? (1 - progress) : progress;
       const actualProgress = startProgress + rangeProgress * activeRange;
 
       const point = getPointAtProgress(actualProgress);
-      particles[i].setAttribute('cx', point.x);
-      particles[i].setAttribute('cy', point.y);
+      particle.setAttribute('cx', point.x);
+      particle.setAttribute('cy', point.y);
     }
 
     animationId = requestAnimationFrame(animate);
   };
 
+  // Start with one particle immediately
+  createParticle();
   animationId = requestAnimationFrame(animate);
 
   // Store for cleanup

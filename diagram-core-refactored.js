@@ -3,7 +3,7 @@
  */
 
 // Suppress console output - set to true to enable debug logging
-const DIAGRAM_DEBUG = false;
+const DIAGRAM_DEBUG = true;
 const diagramLog = DIAGRAM_DEBUG ? console.log.bind(console) : () => {};
 const originalConsoleLog = console.log;
 
@@ -19,6 +19,63 @@ function initializeDiagram() {
       console.log = originalConsoleLog;
     }
   };
+
+  // Replace the problematic label right at the start
+  setTimeout(() => {
+    const svg = document.getElementById('diagram');
+    if (svg) {
+      // Remove the old problematic label
+      const oldLabel = document.getElementById('big-label');
+      if (oldLabel) {
+        oldLabel.remove();
+      }
+
+      // Create a proper RITS label that won't disappear
+      const newLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      newLabel.setAttribute('id', 'big-label');
+      newLabel.setAttribute('x', '300');
+      newLabel.setAttribute('y', '450');
+      newLabel.setAttribute('text-anchor', 'middle');
+      newLabel.setAttribute('dominant-baseline', 'middle');
+      newLabel.setAttribute('fill', 'white');
+      newLabel.setAttribute('font-family', 'Arial, sans-serif');
+      newLabel.setAttribute('font-size', '18');
+      newLabel.setAttribute('font-weight', 'normal');
+      newLabel.classList.add('diagram-content', 'diagram-visible');
+
+      // Add all the tspans with the proper text
+      const tspanData = [
+        { text: 'RITS', dy: '-40', fontSize: '20' },
+        { text: 'Settlement', dy: '20', fontSize: '18' },
+        { text: 'Engine', dy: '20', fontSize: '18' },
+        { text: 'Monday - Friday', dy: '22', fontSize: '12' },
+        { text: '7:30-22:00', dy: '16', fontSize: '12' },
+        { text: 'AEST/AEDT', dy: '16', fontSize: '10' }
+      ];
+
+      tspanData.forEach(data => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.setAttribute('x', '300');
+        tspan.setAttribute('dy', data.dy);
+        if (data.fontSize) {
+          tspan.setAttribute('font-size', data.fontSize);
+        }
+        tspan.setAttribute('font-weight', 'normal');
+        tspan.textContent = data.text;
+        newLabel.appendChild(tspan);
+      });
+
+      // Add it to the SVG
+      svg.appendChild(newLabel);
+
+      // Make it interactive
+      if (typeof window.makeInteractive === 'function') {
+        window.makeInteractive(newLabel, 'rits-circle');
+      }
+
+      console.log('Replaced big-label with a new one');
+    }
+  }, 50);
   // ----- Compute precise positions and the arc path deterministically -----
   // Global constant for CLS sigmoid curve expansion
   const CLS_SIGMOID_EXPANSION = 1.5; // How much to expand horizontally (1.5 = 150% wider on each side)
@@ -43,7 +100,9 @@ function initializeDiagram() {
       /* RITS circle and label must ALWAYS stay visible regardless of class changes */
       #diagram #big-group, #diagram #big-label,
       #diagram #big-group.diagram-hidden, #diagram #big-label.diagram-hidden,
-      #big-group, #big-label { opacity: 1 !important; }
+      #big-group, #big-label { opacity: 1 !important; visibility: visible !important; }
+      /* Override any inline styles on big-label */
+      #big-label[style*="opacity"] { opacity: 1 !important; }
       #diagram .stage-three-label { transition: opacity 0.5s ease-in-out; }
       #diagram .stage-four-label { transition: opacity 0.5s ease-in-out; }
       #diagram .stage-five-element { transition: opacity 0.5s ease-in-out; }
@@ -261,8 +320,14 @@ function initializeDiagram() {
       const bigLabelNode = document.getElementById('big-label');
       // Force RITS label to always be visible (inline style has highest priority)
       if (bigLabelNode) {
-        bigLabelNode.style.opacity = '1';
         bigLabelNode.style.setProperty('opacity', '1', 'important');
+        bigLabelNode.style.setProperty('visibility', 'visible', 'important');
+        // Remove diagram-hidden class if present
+        bigLabelNode.classList.remove('diagram-hidden');
+        // Ensure diagram-visible class is present
+        if (!bigLabelNode.classList.contains('diagram-visible')) {
+          bigLabelNode.classList.add('diagram-visible');
+        }
       }
       // Make RITS label interactive
       if (bigLabelNode && typeof makeInteractive === 'function') {
@@ -362,12 +427,32 @@ function initializeDiagram() {
 
     // Hide ALL SVG children initially (will be revealed after title typewriter)
     // This catches everything - groups, paths, rects, circles, text, etc.
+    console.log('=== INITIAL HIDE PHASE ===');
+    const bigLabelBefore = document.getElementById('big-label');
+    if (bigLabelBefore) {
+      console.log('big-label BEFORE initial hide:');
+      console.log('  classes:', bigLabelBefore.className);
+      console.log('  inline style:', bigLabelBefore.getAttribute('style'));
+      console.log('  computed opacity:', window.getComputedStyle(bigLabelBefore).opacity);
+    }
+
     Array.from(svg.children).forEach(child => {
       if (child.tagName === 'defs') return; // Don't hide defs (filters, gradients, etc.)
       if (child.classList.contains('intro-title')) return; // Keep intro title visible
-      if (child.id === 'big-group' || child.id === 'big-label') return; // Keep RITS circle + label visible
+      if (child.id === 'big-group' || child.id === 'big-label') {
+        console.log(`Skipping ${child.id} from hiding`);
+        return; // Keep RITS circle + label visible
+      }
       child.classList.add('diagram-hidden');
     });
+
+    const bigLabelAfter = document.getElementById('big-label');
+    if (bigLabelAfter) {
+      console.log('big-label AFTER initial hide:');
+      console.log('  classes:', bigLabelAfter.className);
+      console.log('  inline style:', bigLabelAfter.getAttribute('style'));
+      console.log('  computed opacity:', window.getComputedStyle(bigLabelAfter).opacity);
+    }
 
     // Track animation timeout IDs so we can cancel them on skip
     let animationTimeouts = [];
@@ -578,10 +663,12 @@ function initializeDiagram() {
       const numDots = 100;
       const delayPerDot = totalAnimationTime / numDots; // ~9ms per dot
 
-      // First reveal ESA labels and background immediately
-      ['blue-dots-background', 'esas-label-top', 'esas-label-bottom'].forEach(id => {
+      // First reveal ESA labels, background, and RITS circle immediately
+      ['blue-dots-background', 'esas-label-top', 'esas-label-bottom', 'big-group', 'big-label'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.classList.add('diagram-visible');
+        if (el) {
+          el.classList.add('diagram-visible');
+        }
       });
 
       // Make the groups visible but hide individual children initially
@@ -2237,6 +2324,7 @@ function initializeDiagram() {
           } else if (j === 1) {
             austLine.classList.add('dvp-to-austraclear-line');
             austLine.classList.add('dvp-rtgs-to-austraclear-line');
+            austLine.setAttribute('id', 'dvp-rtgs-to-austraclear-line');
             austLine.setAttribute('data-interactive-id', 'dvp-rtgs-to-austraclear-line');
             if (window.makeInteractive) {
               window.makeInteractive(austLine, 'dvp-rtgs-to-austraclear-line');
@@ -2244,6 +2332,7 @@ function initializeDiagram() {
           } else {
             austLine.classList.add('dvp-to-austraclear-line');
             austLine.classList.add('rtgs-to-austraclear-line');
+            austLine.setAttribute('id', 'rtgs-to-austraclear-line');
             austLine.setAttribute('data-interactive-id', 'rtgs-to-austraclear-line');
             if (window.makeInteractive) {
               window.makeInteractive(austLine, 'rtgs-to-austraclear-line');
@@ -3446,6 +3535,10 @@ function initializeDiagram() {
           makeInteractive(moneyMarketRect, 'cash-transfer-box');
           makeInteractive(moneyMarketText, 'cash-transfer-box');
         }
+
+        // Store references to cash transfer box and text for z-ordering
+        window.cashTransferBox = moneyMarketRect;
+        window.cashTransferText = moneyMarketText;
 
         // Sympli line extension moved to after ADI box creation
 
@@ -6552,11 +6645,9 @@ function initializeDiagram() {
           svg.appendChild(window.cashTransferToRtgsLine);
         }
 
-        // Move dvp-cash-leg-to-dvp-rtgs line ON TOP of ASX box border
-        if (window.dvpCashLegToRtgsLine) {
-          window.dvpCashLegToRtgsLine.parentNode.removeChild(window.dvpCashLegToRtgsLine);
-          svg.appendChild(window.dvpCashLegToRtgsLine);
-        }
+        // Store reference to DvP cash leg box and text for z-ordering
+        window.dvpCashLegBox = sssCcpRect;
+        window.dvpCashLegText = sssCcpText;
 
         // Move RTGS box ON TOP of horizontal lines passing through it
         if (window.rtgsElements && window.rtgsElements.rect) {
@@ -7924,16 +8015,24 @@ function initializeDiagram() {
           }
         }
 
-        // Ensure dvp-cash-leg-to-dvp-rtgs line is ON TOP of ASX box
-        if (window.dvpCashLegToRtgsLine) {
-          window.dvpCashLegToRtgsLine.parentNode.removeChild(window.dvpCashLegToRtgsLine);
-          svg.appendChild(window.dvpCashLegToRtgsLine);
+        // Ensure DvP cash leg BOX and TEXT are ON TOP of the dvp-cash-leg-to-dvp-rtgs line
+        if (window.dvpCashLegBox) {
+          window.dvpCashLegBox.parentNode.removeChild(window.dvpCashLegBox);
+          svg.appendChild(window.dvpCashLegBox);
+        }
+        if (window.dvpCashLegText) {
+          window.dvpCashLegText.parentNode.removeChild(window.dvpCashLegText);
+          svg.appendChild(window.dvpCashLegText);
         }
 
-        // Ensure cash-transfer-to-rtgs line is ON TOP of ASX box
-        if (window.cashTransferToRtgsLine) {
-          window.cashTransferToRtgsLine.parentNode.removeChild(window.cashTransferToRtgsLine);
-          svg.appendChild(window.cashTransferToRtgsLine);
+        // Ensure cash transfer BOX and TEXT are ON TOP of the cash-transfer-to-rtgs line
+        if (window.cashTransferBox) {
+          window.cashTransferBox.parentNode.removeChild(window.cashTransferBox);
+          svg.appendChild(window.cashTransferBox);
+        }
+        if (window.cashTransferText) {
+          window.cashTransferText.parentNode.removeChild(window.cashTransferText);
+          svg.appendChild(window.cashTransferText);
         }
 
         // Re-move RTGS and DvP RTGS boxes to be on top of the lines
@@ -8172,6 +8271,7 @@ function initializeDiagram() {
             if (i === 4) {
               path.classList.add('austraclear-to-rits-line');
               path.classList.add('austraclear-to-rits-line-upper');
+              path.setAttribute('id', 'austraclear-to-rits-line-upper');
               path.setAttribute('data-interactive-id', 'austraclear-to-rits-line-upper');
               if (window.makeInteractive) {
                 window.makeInteractive(path, 'austraclear-to-rits-line-upper');
@@ -8180,6 +8280,7 @@ function initializeDiagram() {
             if (i === 5) {
               path.classList.add('austraclear-to-rits-line');
               path.classList.add('austraclear-to-rits-line-lower');
+              path.setAttribute('id', 'austraclear-to-rits-line-lower');
               path.setAttribute('data-interactive-id', 'austraclear-to-rits-line-lower');
               if (window.makeInteractive) {
                 window.makeInteractive(path, 'austraclear-to-rits-line-lower');

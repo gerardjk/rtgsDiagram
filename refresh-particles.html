@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Refresh Particles</title>
+</head>
+<body>
+    <h1>Particle Refresh Test</h1>
+    <button onclick="refreshParticles()">Refresh Particles</button>
+    <pre id="output"></pre>
+
+    <script>
+    function refreshParticles() {
+        // Open the main diagram
+        const win = window.open('index.html', 'diagram');
+
+        // Wait for it to load then refresh particles
+        setTimeout(() => {
+            if (win && win.window && win.window.clearFlowParticles) {
+                // Clear existing particles
+                win.window.clearFlowParticles();
+
+                // Remove any orphaned particles
+                win.document.querySelectorAll('.flow-particle').forEach(p => p.remove());
+
+                // Re-run the particle initialization
+                const script = win.document.createElement('script');
+                script.src = 'force-particles.js?' + Date.now(); // Force reload with cache bust
+                win.document.body.appendChild(script);
+
+                document.getElementById('output').textContent = 'Particles refreshed at ' + new Date().toLocaleTimeString();
+            } else {
+                document.getElementById('output').textContent = 'Could not access diagram window';
+            }
+        }, 3000);
+    }
+    </script>
+</body>
+</html>

@@ -61,6 +61,20 @@
       opacity: 0 !important;
       filter: none !important;
     }
+    /* Ensure big-label and its children are always visible during animation */
+    body.animating-startup #big-label,
+    body.animating-startup #big-label *,
+    body.animating-startup #big-label-new,
+    body.animating-startup #big-label-new * {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    /* Make sure the new label is always on top and visible */
+    #big-label-new {
+      opacity: 1 !important;
+      visibility: visible !important;
+      z-index: 9999 !important;
+    }
 
     /* Prevent ANY highlighting during animation */
     body.animating-startup .highlighted {
@@ -68,9 +82,11 @@
     }
 
     /* Subtle permanent glow on RITS and FSS text labels */
+    /* Temporarily disabled to debug visibility issue
     #big-label, #small-label {
       filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
     }
+    */
 
     /* Animated line brightness - no particles, just moving light */
     .animated-flow-line {
@@ -180,7 +196,7 @@
 
     <!-- Label for blue circle -->
     <text id="big-label" class="diagram-content diagram-visible" x="300" y="436" text-anchor="middle" dominant-baseline="middle"
-          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal" style="opacity: 1;">
+          fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="normal" style="opacity: 1 !important; visibility: visible !important;">
       <tspan x="300" dy="-40" font-size="20">RITS</tspan>
       <tspan x="300" dy="20">Settlement</tspan>
       <tspan x="300" dy="20">Engine</tspan>

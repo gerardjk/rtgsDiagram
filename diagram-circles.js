@@ -53,6 +53,17 @@ function initializeMainCircles(params) {
     }
   }
 
+  // Also update the new label if it exists
+  const newBigLabel = document.getElementById('big-label-new');
+  if (newBigLabel) {
+    newBigLabel.setAttribute('x', cx);
+    newBigLabel.setAttribute('y', cyBig);
+    const tspans = newBigLabel.getElementsByTagName('tspan');
+    for (let tspan of tspans) {
+      tspan.setAttribute('x', cx);
+    }
+  }
+
   // Create gear paths for both circles
   createMainCircleGears(cx, cyBig, cySmall, rBig, rSmall, strokeW);
 
