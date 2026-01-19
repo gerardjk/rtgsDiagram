@@ -979,11 +979,11 @@ const tooltipContent = {
   },
 
   'chess-rtgs-box': {
-    title: 'CHESS-RTGS',
-    subtitle: 'DvP cash settlement interface',
+    title: 'ASXC (CHESS-RTGS)',
+    subtitle: 'Unused DvP settlement interface',
     description:
-      'Interface linking CHESS securities settlement to RTGS cash settlement for delivery-versus-payment.',
-    details: 'DvP risk control: securities delivered only if cash paid, and vice versa.'
+      'Real-time equities feeder system linking CHESS securities settlement to RTGS for trade-by-trade DvP. Despite being available, this system has never been used in practice.',
+    details: 'All participants choose multilateral net settlement (T+2) over this real-time option due to significant netting efficiencies. The infrastructure remains completely unused since inception, as the cost savings from batch netting far outweigh any benefits of immediate settlement.'
   },
 
   'austraclear-box': {

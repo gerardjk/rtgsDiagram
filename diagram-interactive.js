@@ -9,8 +9,25 @@ let currentHighlightedElements = new Set();
 let tooltipIsSticky = false;
 let stickyElementId = null;
 let lastHoveredElementId = null;  // Track for delegation-based hover
+let lastHoverProcessTime = 0;
+const HOVER_THROTTLE_MS = 32; // ~30 FPS
+let pendingHoverEvent = null;
 let justMadeSticky = false;  // Prevent document click from immediately dismissing
 const highlightElementCache = new Map();
+const relatedElementCache = new Map();
+
+function getCachedRelatedElementIds(elementId) {
+  if (relatedElementCache.has(elementId)) {
+    return relatedElementCache.get(elementId);
+  }
+  const baseSet = window.getRelatedElements
+    ? window.getRelatedElements(elementId)
+    : new Set([elementId]);
+  const ids = Array.from(baseSet || []);
+  if (ids.length === 0) ids.push(elementId);
+  relatedElementCache.set(elementId, ids);
+  return ids;
+}
 const boxCircleCache = new Map();
 let allCircleElements = null;
 
@@ -924,6 +941,87 @@ function getCirclesForBox(boxElementId) {
 }
 
 /**
+ * Apply highlights for an element and its related elements
+ */
+function applyHighlights(targetId, elementId, dotIndex, isYellowDot) {
+  // Special handling for boxes that should highlight contained dots
+  if (targetId === 'blue-dots-background') {
+    highlightElement(targetId);
+    setBlueDotsHighlight(true);
+    setYellowDotsHighlight(true);
+    highlightElement('cls-circle');
+  } else if (targetId === 'rits-circle') {
+    setBigCircleHighlight(true);
+    setSmallCircleHighlight(true);
+    setBlueLinesHighlight(true);
+    setYellowLinesHighlight(true);
+    setBlueDotsHighlight(true);
+    setYellowDotsHighlight(true);
+    highlightElement('lvss-gear');
+    highlightElement('cls-circle');
+    highlightElement('blue-dots-background');
+  } else if (targetId === 'fss-circle') {
+    setSmallCircleHighlight(true);
+    setYellowLinesHighlight(true);
+    setYellowDotsHighlight(true);
+  } else if (targetId === 'adi-box' || targetId === 'non-adis-box' ||
+             targetId === 'domestic-banks-box' || targetId === 'international-banks-box' ||
+             targetId === 'foreign-branches-box' || targetId === 'foreign-subsidiaries-box' ||
+             targetId === 'specialised-adis-box' || targetId === 'other-adis-box' ||
+             targetId === 'psps-box' || targetId === 'cs-box') {
+    // Highlight the box itself
+    highlightElement(targetId);
+    // Highlight all circles within this box
+    highlightCirclesInBox(targetId);
+  } else {
+    // Normal highlighting - highlight this element and all related elements
+    let relatedElements;
+    if (isYellowDot) {
+      // Yellow dots should only highlight their own dot/lines, not entire peer groups
+      relatedElements = new Set([targetId]);
+    } else {
+    relatedElements = new Set(getCachedRelatedElementIds(targetId));
+  }
+
+    if (targetId.startsWith('dot-')) {
+      // Ensure the radial lines for this dot also highlight
+      const derivedDotIndex = dotIndex ?? parseInt(targetId.replace('dot-', ''), 10);
+      if (!Number.isNaN(derivedDotIndex)) {
+        relatedElements.add(`blue-line-${derivedDotIndex}`);
+        if (window.yellowLinesByDot && window.yellowLinesByDot[derivedDotIndex]) {
+          relatedElements.add(`yellow-line-${derivedDotIndex}`);
+          relatedElements.add(`yellow-dot-${derivedDotIndex}`);
+        } else if (isYellowDot) {
+          relatedElements.add(`yellow-dot-${derivedDotIndex}`);
+        }
+      }
+    }
+
+    // When hovering on a blue-line, also highlight its corresponding dot
+    if (targetId.startsWith('blue-line-')) {
+      const lineIndex = parseInt(targetId.replace('blue-line-', ''), 10);
+      if (!Number.isNaN(lineIndex)) {
+        relatedElements.add(`dot-${lineIndex}`);
+        // Also add yellow dot/line if this dot has FSS membership
+        if (window.yellowLinesByDot && window.yellowLinesByDot[lineIndex]) {
+          relatedElements.add(`yellow-line-${lineIndex}`);
+          relatedElements.add(`yellow-dot-${lineIndex}`);
+        }
+      }
+    }
+
+    relatedElements.forEach(id => {
+      highlightElement(id);
+    });
+  }
+
+  // Ensure the specific yellow dot element glows when hovered directly
+  if (isYellowDot && dotIndex !== null) {
+    highlightElement(`yellow-dot-${dotIndex}`);
+  }
+}
+
+/**
  * Handle mouse enter on an interactive element
  */
 const bigCircleIds = ['big-outer', 'big-inner', 'big-label'];
@@ -1051,6 +1149,23 @@ function handleMouseEnter(event) {
   const elementId = event.currentTarget.dataset.interactiveId;
   if (!elementId) return;
 
+  const now = performance.now();
+  const timeSinceLast = now - lastHoverProcessTime;
+  const forceProcess = Boolean(event && event.__forceProcessHover);
+  if (!forceProcess && timeSinceLast < HOVER_THROTTLE_MS) {
+    pendingHoverEvent = event;
+    clearTimeout(handleMouseEnter._throttleTimeout);
+    const delay = Math.max(0, HOVER_THROTTLE_MS - timeSinceLast);
+    handleMouseEnter._throttleTimeout = setTimeout(() => {
+      if (pendingHoverEvent) {
+        const evt = pendingHoverEvent;
+        pendingHoverEvent = null;
+        requestAnimationFrame(() => handleMouseEnter(evt));
+      }
+    }, delay);
+    return;
+  }
+
   const { targetId, dotIndex, isYellowDot } = resolveHoverTarget(elementId);
   if (!targetId) return;
   const overrideTarget = getHigherPriorityInteractive(event, targetId);
@@ -1058,7 +1173,8 @@ function handleMouseEnter(event) {
     handleMouseEnter({
       currentTarget: overrideTarget,
       clientX: event.clientX,
-      clientY: event.clientY
+      clientY: event.clientY,
+      __forceProcessHover: true
     });
     return;
   }
@@ -1076,84 +1192,18 @@ function handleMouseEnter(event) {
   // Pass original elementId for color (so yellow dots show yellow, not blue)
   showTooltip(targetId, event, elementId);
 
-  // Special handling for boxes that should highlight contained dots
-  if (targetId === 'blue-dots-background') {
-    highlightElement(targetId);
-    setBlueDotsHighlight(true);
-    setYellowDotsHighlight(true);
-    highlightElement('cls-circle');
-  } else if (targetId === 'rits-circle') {
-    setBigCircleHighlight(true);
-    setSmallCircleHighlight(true);
-    setBlueLinesHighlight(true);
-    setYellowLinesHighlight(true);
-    setBlueDotsHighlight(true);
-    setYellowDotsHighlight(true);
-    highlightElement('lvss-gear');
-    highlightElement('cls-circle');
-    highlightElement('blue-dots-background');
+  // Apply highlights using the shared function
+  applyHighlights(targetId, elementId, dotIndex, isYellowDot);
+
+  // Special case: return early for RITS circle
+  if (targetId === 'rits-circle') {
     return;
-  } else if (targetId === 'fss-circle') {
-    setSmallCircleHighlight(true);
-    setYellowLinesHighlight(true);
-    setYellowDotsHighlight(true);
-  } else if (targetId === 'adi-box' || targetId === 'non-adis-box' ||
-             targetId === 'domestic-banks-box' || targetId === 'international-banks-box' ||
-             targetId === 'foreign-branches-box' || targetId === 'foreign-subsidiaries-box' ||
-             targetId === 'specialised-adis-box' || targetId === 'other-adis-box' ||
-             targetId === 'psps-box' || targetId === 'cs-box') {
-    // Highlight the box itself
-    highlightElement(targetId);
-
-    // Highlight all circles within this box
-    highlightCirclesInBox(targetId);
-  } else {
-    // Normal highlighting - highlight this element and all related elements
-    let relatedElements;
-    if (isYellowDot) {
-      // Yellow dots should only highlight their own dot/lines, not entire peer groups
-      relatedElements = new Set([targetId]);
-    } else {
-      relatedElements = window.getRelatedElements?.(targetId) || new Set([targetId]);
-    }
-
-    if (targetId.startsWith('dot-')) {
-      // Ensure the radial lines for this dot also highlight
-      const derivedDotIndex = dotIndex ?? parseInt(targetId.replace('dot-', ''), 10);
-      if (!Number.isNaN(derivedDotIndex)) {
-        relatedElements = new Set(relatedElements);
-        relatedElements.add(`blue-line-${derivedDotIndex}`);
-        if (window.yellowLinesByDot && window.yellowLinesByDot[derivedDotIndex]) {
-          relatedElements.add(`yellow-line-${derivedDotIndex}`);
-          relatedElements.add(`yellow-dot-${derivedDotIndex}`);
-        } else if (isYellowDot) {
-          relatedElements.add(`yellow-dot-${derivedDotIndex}`);
-        }
-      }
-    }
-
-    // When hovering on a blue-line, also highlight its corresponding dot
-    if (targetId.startsWith('blue-line-')) {
-      const lineIndex = parseInt(targetId.replace('blue-line-', ''), 10);
-      if (!Number.isNaN(lineIndex)) {
-        relatedElements = new Set(relatedElements);
-        relatedElements.add(`dot-${lineIndex}`);
-        // Also add yellow dot/line if this dot has FSS membership
-        if (window.yellowLinesByDot && window.yellowLinesByDot[lineIndex]) {
-          relatedElements.add(`yellow-line-${lineIndex}`);
-          relatedElements.add(`yellow-dot-${lineIndex}`);
-        }
-      }
-    }
-
-    relatedElements.forEach(id => {
-      highlightElement(id);
-    });
   }
 
-  // Ensure the specific yellow dot element glows when hovered directly
-  if (isYellowDot && dotIndex !== null) {
-    highlightElement(`yellow-dot-${dotIndex}`);
+  lastHoverProcessTime = performance.now();
+
+  if (pendingHoverEvent && pendingHoverEvent !== event) {
+    pendingHoverEvent = null;
   }
 }
 
@@ -1316,7 +1366,7 @@ function makeInteractiveHighlightOnly(element, elementId) {
 
   // Custom handler that only does highlighting, no tooltip
   element.addEventListener('mouseenter', (event) => {
-    const relatedElements = window.getRelatedElements?.(elementId) || new Set([elementId]);
+    const relatedElements = getCachedRelatedElementIds(elementId);
     relatedElements.forEach(id => {
       highlightElement(id);
     });
@@ -1509,8 +1559,40 @@ function initializeInteractive() {
       // Add delegated click for reliability
       svg.addEventListener('click', handleSvgClick);
 
+      // Add touch support for mobile devices
+      svg.addEventListener('touchstart', handleSvgTouchStart, { passive: false });
     }
   }, 200); // Delay to ensure diagram is rendered
+}
+
+/**
+ * Handle touch start on SVG for mobile support
+ */
+function handleSvgTouchStart(event) {
+  // Get the touch point
+  const touch = event.touches[0];
+  if (!touch) return;
+
+  // Find the element at the touch point
+  const element = document.elementFromPoint(touch.clientX, touch.clientY);
+  const interactiveEl = element?.closest('[data-interactive-id]');
+
+  if (interactiveEl) {
+    // Prevent default touch behavior (scrolling, zooming)
+    event.preventDefault();
+
+    // Create a synthetic click event with touch coordinates
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      view: window
+    });
+
+    // Dispatch the click event to trigger our click handler
+    interactiveEl.dispatchEvent(clickEvent);
+  }
 }
 
 /**
@@ -1547,17 +1629,15 @@ function handleSvgClick(event) {
 
     setTimeout(() => { justMadeSticky = false; }, 10);
 
-    // Ensure tooltip and highlights are shown
+    // Clear any existing highlights first
+    clearHighlights();
+
+    // Ensure tooltip is shown
     showTooltip(resolvedFinalTargetId, event, elementId);
 
-    // For RITS, don't call getRelatedElements - handleMouseEnter already handles the special highlighting
-    if (resolvedFinalTargetId !== 'rits-circle' && resolvedFinalTargetId !== 'fss-circle') {
-      // Highlight this element and all related elements
-      const relatedElements = window.getRelatedElements?.(resolvedFinalTargetId) || new Set([resolvedFinalTargetId]);
-      relatedElements.forEach(id => {
-        highlightElement(id);
-      });
-    }
+    // Apply the same highlighting logic as hover
+    const { targetId: finalTarget, dotIndex, isYellowDot } = resolveHoverTarget(elementId);
+    applyHighlights(resolvedFinalTargetId, elementId, dotIndex, isYellowDot);
 
     event.stopPropagation();
   }
