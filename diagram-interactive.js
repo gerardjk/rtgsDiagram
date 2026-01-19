@@ -1808,7 +1808,98 @@ function createFlowParticles(pathId, countIgnored, options = {}) {
  * Create a single flowing particle (convenience wrapper)
  */
 function createFlowParticle(pathId, options = {}) {
-  return createFlowParticles(pathId, 1, options)[0];
+  const element = document.getElementById(pathId) ||
+                  document.querySelector(`[data-interactive-id="${pathId}"]`);
+  if (!element) return null;
+
+  const svg = document.getElementById('diagram');
+  if (!svg) return null;
+
+  const tagName = element.tagName.toLowerCase();
+  const isPath = tagName === 'path' && typeof element.getTotalLength === 'function';
+  const isLine = tagName === 'line';
+  if (!isPath && !isLine) return null;
+
+  const elementLength = isPath ? element.getTotalLength() : getLineLength(element);
+  if (!Number.isFinite(elementLength) || elementLength <= 0) return null;
+
+  const strokeWidth = parseFloat(element.getAttribute('stroke-width')) ||
+                      parseFloat(window.getComputedStyle(element).strokeWidth) || 6;
+  const size = options.sizeOverride || (strokeWidth / 2);  // Radius = half of stroke width
+
+  const strokeColor = element.getAttribute('stroke') ||
+                      window.getComputedStyle(element).stroke || '#ffffff';
+  const particleColor = lightenColor(strokeColor, 0.6);
+
+  const reverse = options.reverse || false;
+  const speed = options.speed || PARTICLE_SPEED_DEFAULT;
+  const startProgress = options.startProgress ?? 0;
+  const endProgress = options.endProgress ?? 1;
+  const activeRange = endProgress - startProgress;
+  const activeLength = elementLength * activeRange;
+  if (activeLength <= 0) return null;
+
+  const duration = (activeLength / speed) * 1000;
+  const startDelay = options.initialDelayMs || 0;
+
+  let particleGroup = document.getElementById('particle-group');
+  if (!particleGroup) {
+    particleGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    particleGroup.setAttribute('id', 'particle-group');
+    particleGroup.classList.add('diagram-visible');
+    particleGroup.style.opacity = '1';
+    svg.appendChild(particleGroup);
+  }
+
+  const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  particle.setAttribute('r', size);
+  particle.setAttribute('fill', particleColor);
+  particle.classList.add('flow-particle', 'diagram-visible');
+  particle.style.opacity = '1';
+  particle.style.pointerEvents = 'none';
+  particleGroup.appendChild(particle);
+
+  const startTime = performance.now() + startDelay;
+
+  const updatePosition = (progress) => {
+    const rangeProgress = reverse ? (1 - progress) : progress;
+    const actualProgress = startProgress + rangeProgress * activeRange;
+    const point = isPath
+      ? element.getPointAtLength(actualProgress * elementLength)
+      : getLinePointAtProgress(element, actualProgress);
+    particle.setAttribute('cx', point.x);
+    particle.setAttribute('cy', point.y);
+  };
+
+  updatePosition(0);
+
+  let animationId;
+  const particleKey = `${pathId}-single-${Math.random().toString(36).slice(2)}`;
+
+  const animate = (timestamp) => {
+    if (timestamp < startTime) {
+      animationId = requestAnimationFrame(animate);
+      return;
+    }
+
+    const elapsed = timestamp - startTime;
+    const progress = elapsed / duration;
+
+    if (progress >= 1) {
+      updatePosition(1);
+      particle.remove();
+      activeFlowAnimations.delete(particleKey);
+      return;
+    }
+
+    updatePosition(progress);
+    animationId = requestAnimationFrame(animate);
+  };
+
+  animationId = requestAnimationFrame(animate);
+  activeFlowAnimations.set(particleKey, { particles: [particle], animationId });
+
+  return particle;
 }
 
 /**
@@ -1851,14 +1942,15 @@ function createChainedFlowParticles(pathIds, options = {}) {
 
   // Get stroke width and color from first path
   const strokeWidth = parseFloat(paths[0].element.getAttribute('stroke-width')) || 6;
-  const size = options.sizeOverride || (strokeWidth / 2);
+  const size = options.sizeOverride || (strokeWidth / 2);  // Radius = half of stroke width
 
   // Get stroke color and create lightened version for particles
   const strokeColor = paths[0].element.getAttribute('stroke') ||
                       window.getComputedStyle(paths[0].element).stroke || '#ffffff';
   const particleColor = lightenColor(strokeColor, 0.6);  // 60% toward white
 
-  const count = Math.max(1, Math.floor(totalLength / spacing));
+  // For time-based frequency: spacing = milliseconds between particles
+  const timeInterval = spacing * 10;  // Convert spacing to time interval (ms)
   const duration = (totalLength / speed) * 1000;
 
   // Helper to get point at progress across all chained paths
@@ -1895,9 +1987,13 @@ function createChainedFlowParticles(pathIds, options = {}) {
     svg.appendChild(particleGroup);
   }
 
-  // Create particles
+  // Create particles periodically - no looping, just spawn at start and travel once
   const particles = [];
-  for (let i = 0; i < count; i++) {
+  let animationId;
+  let lastSpawnTime = 0;
+
+  // Function to create a single particle
+  const createParticle = () => {
     const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     particle.setAttribute('r', size);
     particle.setAttribute('fill', particleColor);
@@ -1905,37 +2001,56 @@ function createChainedFlowParticles(pathIds, options = {}) {
     particle.style.opacity = '1';
     particle.style.pointerEvents = 'none';
 
-    const initialProgress = i / count;
+    // Start at beginning or end depending on reverse
+    const initialProgress = reverse ? 1 : 0;
     const initialPoint = getPointAtProgress(initialProgress);
     particle.setAttribute('cx', initialPoint.x);
     particle.setAttribute('cy', initialPoint.y);
 
+    // Store creation time for this particle
+    particle._createdAt = performance.now();
+
     particleGroup.appendChild(particle);
     particles.push(particle);
-  }
+    return particle;
+  };
 
-  // Animation loop
-  let animationId;
-  let startTime = null;
-
+  // Animation loop that spawns new particles and moves existing ones
   const animate = (timestamp) => {
-    if (!startTime) startTime = timestamp;
-    const elapsed = timestamp - startTime;
-    const baseProgress = (elapsed % duration) / duration;
+    // Spawn new particle at regular intervals
+    if (timestamp - lastSpawnTime >= timeInterval) {
+      createParticle();
+      lastSpawnTime = timestamp;
+    }
 
-    for (let i = 0; i < count; i++) {
-      const offset = i / count;
-      let progress = (baseProgress + offset) % 1;
-      if (reverse) progress = 1 - progress;
+    // Update all particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const particle = particles[i];
+      const age = timestamp - particle._createdAt;
 
-      const point = getPointAtProgress(progress);
-      particles[i].setAttribute('cx', point.x);
-      particles[i].setAttribute('cy', point.y);
+      // Calculate progress based on age
+      let progress = age / duration;
+
+      // Remove particle when it reaches the end
+      if (progress >= 1) {
+        particle.remove();
+        particles.splice(i, 1);
+        continue;
+      }
+
+      // Calculate actual position
+      let actualProgress = reverse ? (1 - progress) : progress;
+
+      const point = getPointAtProgress(actualProgress);
+      particle.setAttribute('cx', point.x);
+      particle.setAttribute('cy', point.y);
     }
 
     animationId = requestAnimationFrame(animate);
   };
 
+  // Start with one particle immediately
+  createParticle();
   animationId = requestAnimationFrame(animate);
 
   // Store for cleanup
